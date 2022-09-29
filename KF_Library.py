@@ -12,12 +12,9 @@ def filteringInitializer(F, Q, H, R, y, m0, P0, RunTime,l):
             P1 = F @ P0 @ F.T + Q
             S = H @ P1 @ H.T + R
             K = P1 @ H.T @ np.linalg.inv(S)
-            print("Kshape=",K.shape)
             A = np.zeros(F.shape)
-            print("m1shape=",m1.shape)
-            print("mm", (y[0] - (H @ m1)).shape)
             b = m1 + K @ (y[0] - (H @ m1))
-            b = b[:,None]
+            b = b[:, None]
             C = P1 - (K @ S @ K.T)
 
             eta = np.zeros((F.shape[0],1))
@@ -26,7 +23,6 @@ def filteringInitializer(F, Q, H, R, y, m0, P0, RunTime,l):
         else:
             S = H @ Q @ H.T + R
             K = Q @ H.T @ np.linalg.inv(S)
-#             print("Kshape444=",K.shape)
             A = F - K @ H @ F
             b = K @ y[k//l,None].T
             C = Q - K @ H @ Q

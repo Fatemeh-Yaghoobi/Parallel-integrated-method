@@ -4,29 +4,39 @@ import jax
 import jax.numpy as jnp
 from jax.scipy.linalg import cho_solve, solve_triangular
 
-from parsmooth._base import MVNStandard, FunctionalModel, MVNSqrt, are_inputs_compatible, ConditionalMomentsModel
+from parsmooth._base import MVNStandard, FunctionalModel, MVNSqrt, are_inputs_compatible, ConditionalMomentsModel, \
+    MVNIntegrated
 from parsmooth._utils import tria, none_or_shift, none_or_concat, mvn_loglikelihood
 
 
 def filtering(observations: jnp.ndarray,
-              x0: Union[MVNSqrt, MVNStandard],
+              x0: Union[MVNSqrt, MVNStandard, MVNIntegrated],
               transition_model: Union[FunctionalModel, ConditionalMomentsModel],
               observation_model: Union[FunctionalModel, ConditionalMomentsModel],
               linearization_method: Callable,
+              l: int = 1,
               nominal_trajectory: Optional[Union[MVNSqrt, MVNStandard]] = None,
               return_loglikelihood: bool = False):
+
     if nominal_trajectory is not None:
         are_inputs_compatible(x0, nominal_trajectory)
 
-    def predict(F_x, cov_or_chol, b, x):
-        if isinstance(x, MVNSqrt):
+    def predict(F_x, cov_or_chol, b, x, l):
+        if isinstance(x, MVNIntegrated):
+            A_bar = 1/l
+            return _integrated_predict(F_x, cov_or_chol, b, x, l)
+        elif isinstance(x, MVNSqrt):
             return _sqrt_predict(F_x, cov_or_chol, b, x)
-        return _standard_predict(F_x, cov_or_chol, b, x)
+        else:
+            return _standard_predict(F_x, cov_or_chol, b, x)
 
     def update(H_x, cov_or_chol, c, x, y):
-        if isinstance(x, MVNSqrt):
+        if isinstance(x, MVNIntegrated):
+            return _integrated_update(H_x, cov_or_chol, c, x, y, l)
+        elif isinstance(x, MVNSqrt):
             return _sqrt_update(H_x, cov_or_chol, c, x, y)
-        return _standard_update(H_x, cov_or_chol, c, x, y)
+        else:
+            return _standard_update(H_x, cov_or_chol, c, x, y)
 
     def body(carry, inp):
         x, ell = carry
@@ -52,6 +62,29 @@ def filtering(observations: jnp.ndarray,
     else:
         return xs
 
+
+def _integrated_predict(F, Q, b, x):
+    m, P = x
+
+    m = F @ m + b
+    P = Q + F @ P @ F.T
+
+    return MVNStandard(m, P)
+
+
+def _integrated_update(H, R, c, x, y):
+    m, P = x
+
+    y_hat = H @ m + c
+    y_diff = y - y_hat
+    S = R + H @ P @ H.T
+    chol_S = jnp.linalg.cholesky(S)
+    G = P @ cho_solve((chol_S, True), H).T
+
+    m = m + G @ y_diff
+    P = P - G @ S @ G.T
+    ell = mvn_loglikelihood(y_diff, chol_S)
+    return MVNStandard(m, P), ell
 
 def _standard_predict(F, Q, b, x):
     m, P = x

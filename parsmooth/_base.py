@@ -12,6 +12,11 @@ class MVNSqrt(NamedTuple):
     chol: Any
 
 
+class MVNIntegrated(NamedTuple):
+    mean: Any
+    cov: Any
+
+
 class FunctionalModel(NamedTuple):
     function: Callable
     mvn: Union[MVNSqrt, MVNStandard]
