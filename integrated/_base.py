@@ -8,7 +8,7 @@ class MVNStandard(NamedTuple):
 
 
 class LinearIntegrated(NamedTuple):
-    F: Any
-    G: Any
-    b: Any
+    A_bar: Any
+    B_bar: Any
+    b_bar: Any
     cov: Any
