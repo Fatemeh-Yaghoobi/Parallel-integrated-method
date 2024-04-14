@@ -28,7 +28,7 @@ def integrated_parameters(A, l):
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
               transition_model: LinearIntegrated,
-              observation_model: LinearIntegrated,
+              observation_model,
               l: int):
 
     def body(x, y):

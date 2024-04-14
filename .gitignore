@@ -3899,7 +3899,7 @@ pip-log.txt
 # Common configure file
 /Application/Common/Conf/config.php
 ### WordPress template
-# Wordpress - ignore core, configuration, examples, uploads and logs.
+# Wordpress - ignore core, configuration, tests, uploads and logs.
 # https://github.com/github/gitignore/blob/main/WordPress.gitignore
 
 # Core
