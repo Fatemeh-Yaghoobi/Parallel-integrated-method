@@ -6,7 +6,7 @@ from jax.experimental.host_callback import id_print
 from jax.lax import scan, associative_scan
 from jax.scipy.linalg import cho_solve
 
-from integrated._base import MVNStandard, LinearIntegrated
+from integrated._base import MVNStandard, LinearIntegrated, LinearIntegratedObs
 from integrated._utils import none_or_shift, none_or_concat
 
 def integrated_parameters(A, l):
@@ -28,7 +28,7 @@ def integrated_parameters(A, l):
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
               transition_model: LinearIntegrated,
-              observation_model,
+              observation_model: LinearIntegratedObs,
               l: int):
 
     def body(x, y):
@@ -49,6 +49,7 @@ def filtering(observations: jnp.ndarray,
 
 def _fast_update(transition_model, observation_model, h, j):
     i = j + 1
+    m_h, P_h = h
     A, A_bar, B_bar, b_bar, Q = transition_model
     C, R = observation_model
     def B_i_f(A, i):
@@ -59,20 +60,21 @@ def _fast_update(transition_model, observation_model, h, j):
         return B_bar_i_f
 
     B_bar_i_f = B_i_f(A, i)
-    m_h, P_h = h
+    b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
     A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
-    c_i = B_bar_i_f @ ...  - A_tilda_i @ B_bar @ b_bar # check
+    c_i = B_bar_i_f @ b_bar_f  - A_tilda_i @ B_bar @ b_bar # check
+
     m_x = A_tilda_i @ m_h + c_i
-    P_x =
-    return MVNStandard(m_x, P_x)
+    P_x = A_tilda_i @ P_h @ A_tilda_i.T + jnp.sum(B_bar_i_f @ Q @ B_bar_i_f.T, axis=0) # check this line not complete
+    return MVNStandard(m_h, P_h)  # check this line not correct
 
 
 def _integrated_predict(transition_model, x):
     m, P = x
     A, A_bar, B_bar, b_bar, Q = transition_model
 
-    m = A_bar @ m + B_bar @ b_bar # tensor dot attention
-    P = A_bar @ P @ A_bar.T + jnp.sum(B_bar @ Q @ B_bar.T, axis=0) # check this line
+    m = A_bar @ m + jnp.sum(B_bar @ b_bar, axis=0) # tensor dot attention (b_bar should be l x nx)
+    P = A_bar @ P @ A_bar.T + jnp.sum(B_bar @ Q @ B_bar, axis=0) # check this line vs jax.numpy.tensordot
 
     return MVNStandard(m, P)
 

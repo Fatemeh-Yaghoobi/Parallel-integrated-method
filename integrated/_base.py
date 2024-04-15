@@ -13,3 +13,7 @@ class LinearIntegrated(NamedTuple):
     B_bar: Any
     b_bar: Any
     cov: Any
+
+class LinearIntegratedObs(NamedTuple):
+    C: Any
+    cov: Any

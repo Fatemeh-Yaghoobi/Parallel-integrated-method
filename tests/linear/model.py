@@ -1,10 +1,11 @@
 import jax
 import jax.numpy as jnp
 from chex import dataclass
+from jax._src.lax.control_flow import associative_scan
 from jax.lax import scan
 from matplotlib import pyplot as plt
 
-from integrated._base import MVNStandard
+from integrated._base import MVNStandard, LinearIntegrated, LinearIntegratedObs
 
 
 @dataclass
@@ -17,6 +18,29 @@ class DistillationSSM:
     R: float
     prior_x: MVNStandard
     seed: int
+
+    def TranParams(self):
+        A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
+                       [1.2081, 0.0738, 0.0763, 0.4087],
+                       [0.7331, 0.0674, 0.0878, 0.8767],
+                       [0.0172, 0.0047, 0.0114, 0.9123]])
+        def body(_, j):
+            i = self.l - j
+            A_vec = A ** (i - 1)
+            return _, A_vec
+
+        _, A_vec = scan(body, None, jnp.arange(self.l))
+        A_bar = (1 / self.l) * jnp.sum(A @ A_vec, axis=0)
+        B_bar = (1 / self.l) * associative_scan(jnp.add, A_vec, reverse=True)
+        b_bar = jnp.zeros((self.nx,))
+        cov = jnp.eye(self.nx) * self.Q
+        return LinearIntegrated(A, A_bar, B_bar, b_bar, cov)
+
+    def ObsParams(self):
+        C = jnp.array([[1, 0, 0, 0],
+                       [0, 0, 0, 1]])
+        cov = jnp.eye(self.ny) * self.R
+        return LinearIntegratedObs(C, cov)
 
     def TranModel(self, x):
         A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
@@ -53,7 +77,7 @@ class DistillationSSM:
             start_index = (k * self.l + 1,0)
             slice_size = (self.l, self.nx)
             x_slice = jax.lax.dynamic_slice(true_states, start_index, slice_size)
-            h = 1/self.l *jnp.sum(x_slice, axis=0)
+            h = 1/self.l * jnp.sum(x_slice, axis=0)
             return _, h
 
         _, h = scan(body_h, None, jnp.arange(self.interval))
