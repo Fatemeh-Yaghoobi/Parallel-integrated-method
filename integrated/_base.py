@@ -9,6 +9,7 @@ class MVNStandard(NamedTuple):
 
 class LinearIntegrated(NamedTuple):
     A: Any
+    Bi_vec: Any
     A_bar: Any
     B_bar: Any
     b_bar: Any

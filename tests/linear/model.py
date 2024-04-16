@@ -27,14 +27,15 @@ class DistillationSSM:
         def body(_, j):
             i = self.l - j
             A_vec = A ** (i - 1)
-            return _, A_vec
+            Bi_vec = A ** j
+            return _, (A_vec, Bi_vec)
 
-        _, A_vec = scan(body, None, jnp.arange(self.l))
+        _, (A_vec, Bi_vec) = scan(body, None, jnp.arange(self.l))
         A_bar = (1 / self.l) * jnp.sum(A @ A_vec, axis=0)
         B_bar = (1 / self.l) * associative_scan(jnp.add, A_vec, reverse=True)
         b_bar = jnp.zeros((self.nx,))
         cov = jnp.eye(self.nx) * self.Q
-        return LinearIntegrated(A, A_bar, B_bar, b_bar, cov)
+        return LinearIntegrated(A, Bi_vec, A_bar, B_bar, b_bar, cov)
 
     def ObsParams(self):
         C = jnp.array([[1, 0, 0, 0],

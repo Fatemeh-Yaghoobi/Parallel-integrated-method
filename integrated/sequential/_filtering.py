@@ -9,21 +9,6 @@ from jax.scipy.linalg import cho_solve
 from integrated._base import MVNStandard, LinearIntegrated, LinearIntegratedObs
 from integrated._utils import none_or_shift, none_or_concat
 
-def integrated_parameters(A, l):
-    def body(_, j):
-        i = l - j
-        A_vec = A ** (i - 1)
-        return _, A_vec
-    _, A_vec = scan(body, None, jnp.arange(l))
-    A_bar = (1 / l) * jnp.sum(A @ A_vec, axis=0)
-    B_bar = (1 / l) * associative_scan(jnp.add, A_vec, reverse=True)
-    return A_bar, B_bar
-
-
-# A = jnp.array([[2]])
-# l = 3
-# A_bar, B_bar= integrated_parameters(A, l)
-# print(A_bar.shape, B_bar.shape)
 
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
@@ -50,19 +35,14 @@ def filtering(observations: jnp.ndarray,
 def _fast_update(transition_model, observation_model, h, j):
     i = j + 1
     m_h, P_h = h
-    A, A_bar, B_bar, b_bar, Q = transition_model
+    nx = m_h.shape[0]
+    A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
     C, R = observation_model
-    def B_i_f(A, i):
-        def body(_, k):
-            B_i_f_vec = A ** (i - k - 1)
-            return _, B_i_f_vec
-        _, B_bar_i_f = scan(body, None, jnp.arange(i))
-        return B_bar_i_f
 
-    B_bar_i_f = B_i_f(A, i)
+    B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
     b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
     A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
-    c_i = B_bar_i_f @ b_bar_f  - A_tilda_i @ B_bar @ b_bar # check
+    c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
 
     m_x = A_tilda_i @ m_h + c_i
     P_x = A_tilda_i @ P_h @ A_tilda_i.T + jnp.sum(B_bar_i_f @ Q @ B_bar_i_f.T, axis=0) # check this line not complete
@@ -71,7 +51,7 @@ def _fast_update(transition_model, observation_model, h, j):
 
 def _integrated_predict(transition_model, x):
     m, P = x
-    A, A_bar, B_bar, b_bar, Q = transition_model
+    A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
 
     m = A_bar @ m + jnp.sum(B_bar @ b_bar, axis=0) # tensor dot attention (b_bar should be l x nx)
     P = A_bar @ P @ A_bar.T + jnp.sum(B_bar @ Q @ B_bar, axis=0) # check this line vs jax.numpy.tensordot
