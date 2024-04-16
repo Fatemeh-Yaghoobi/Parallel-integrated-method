@@ -36,12 +36,38 @@ def fast_state(A, c, Q, h, i):
     mxi = A**i @ h.mean @ (A**i).T + c[i-1]
     return MVNStandard(mxi, Pxi)
 
-print(Q + A @ Q @ A.T, A**2@h.mean@(A**2).T + c[1])
-i = 2
-res = fast_state(A, c, Q, h, i)
-print(res)
+# print(Q + A @ Q @ A.T, A**2@h.mean@(A**2).T + c[1])
+# i = 2
+# res = fast_state(A, c, Q, h, i)
+# print(res)
+#
+# vmap_func = jax.vmap(fast_state, in_axes=(None, None, None, None, 0))
+# i = jnp.array([1, 2])
+# res_vmap = vmap_func(A, c, Q, h, i)
+# print(res_vmap)
 
-vmap_func = jax.vmap(fast_state, in_axes=(None, None, None, None, 0))
-i = jnp.array([1, 2])
-res_vmap = vmap_func(A, c, Q, h, i)
-print(res_vmap)
+
+import jax.numpy as jnp
+from jax import lax
+
+
+def lower_block_triangular_matrix(A, n):
+    def body(carry, _):
+        carry = A @ carry
+        return carry, carry
+    _, lower_blocks = jax.lax.scan(body, A, jnp.arange(n))
+    return lower_blocks
+
+
+# Example usage
+A = jnp.array([[1, 2, 3],
+               [4, 5, 6],
+               [7, 8, 9]])
+
+n = 4  # Size of the resulting matrix
+result_matrix = lower_block_triangular_matrix(A, n)
+# print(result_matrix)
+
+func = lambda j: jnp.linalg.matrix_power(A, j)
+result = jax.vmap(func)(jnp.arange(1, 1))
+print(result)

@@ -35,7 +35,9 @@ class DistillationSSM:
         B_bar = (1 / self.l) * associative_scan(jnp.add, A_vec, reverse=True)
         b_bar = jnp.zeros((self.nx,))
         cov = jnp.eye(self.nx) * self.Q
-        return LinearIntegrated(A, Bi_vec, A_bar, B_bar, b_bar, cov)
+        Bb_bar = 1 / self.l * jnp.sum(B_bar @ b_bar, axis=0) # tensor dot attention (b_bar should be l x nx)
+        Q_bar = jnp.sum(B_bar @ cov @ B_bar, axis=0) # check this line vs jax.numpy.tensordot
+        return LinearIntegrated(A, Bi_vec, A_bar, B_bar, b_bar, cov, Bb_bar, Q_bar)
 
     def ObsParams(self):
         C = jnp.array([[1, 0, 0, 0],

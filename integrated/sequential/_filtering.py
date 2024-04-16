@@ -36,7 +36,7 @@ def _fast_update(transition_model, observation_model, h, j):
     i = j + 1
     m_h, P_h = h
     nx = m_h.shape[0]
-    A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
+    A, Bi_vec, A_bar, B_bar, b_bar, Q, Bb_bar, Q_bar = transition_model
     C, R = observation_model
 
     B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
@@ -45,16 +45,33 @@ def _fast_update(transition_model, observation_model, h, j):
     c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
 
     m_x = A_tilda_i @ m_h + c_i
-    P_x = A_tilda_i @ P_h @ A_tilda_i.T + jnp.sum(B_bar_i_f @ Q @ B_bar_i_f.T, axis=0) # check this line not complete
     return MVNStandard(m_h, P_h)  # check this line not correct
+
+
+
+# def _fast_update(transition_model, observation_model, h, j):
+#     i = j + 1
+#     m_h, P_h = h
+#     nx = m_h.shape[0]
+#     A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
+#     C, R = observation_model
+#
+#     B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
+#     b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
+#     A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
+#     c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
+#
+#     m_x = A_tilda_i @ m_h + c_i
+#     # P_x = A_tilda_i @ P_h @ A_tilda_i.T + jnp.sum(B_bar_i_f @ Q @ B_bar_i_f.T, axis=0) # check this line not complete
+#     return MVNStandard(m_h, P_h)  # check this line not correct
 
 
 def _integrated_predict(transition_model, x):
     m, P = x
-    A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
+    A, Bi_vec, A_bar, B_bar, b_bar, Q, Bb_bar, Q_bar = transition_model
 
-    m = A_bar @ m + jnp.sum(B_bar @ b_bar, axis=0) # tensor dot attention (b_bar should be l x nx)
-    P = A_bar @ P @ A_bar.T + jnp.sum(B_bar @ Q @ B_bar, axis=0) # check this line vs jax.numpy.tensordot
+    m = A_bar @ m + Bb_bar
+    P = A_bar @ P @ A_bar.T + Q_bar
 
     return MVNStandard(m, P)
 
