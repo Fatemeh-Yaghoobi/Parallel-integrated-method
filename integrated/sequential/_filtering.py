@@ -6,22 +6,23 @@ from jax.experimental.host_callback import id_print
 from jax.lax import scan, associative_scan
 from jax.scipy.linalg import cho_solve
 
-from integrated._base import MVNStandard, LinearIntegrated, LinearIntegratedObs
+from integrated._base import MVNStandard, LinearTran, LinearObs, SlowRateIntegratedParams
 from integrated._utils import none_or_shift, none_or_concat
 
 
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
-              transition_model: LinearIntegrated,
-              observation_model: LinearIntegratedObs,
+              transition_model: LinearTran,
+              observation_model: LinearObs,
+              slow_rate_params: SlowRateIntegratedParams,
               l: int):
 
     def body(x, y):
-        h = _integrated_predict(transition_model,  x)
-        h = _integrated_update(observation_model, h, y)
+        h = _integrated_predict(slow_rate_params,  x)
+        h, L = _integrated_update(observation_model, h, y)
 
         def fast_body(_, i):
-            x = _fast_update(transition_model, observation_model, h, i)
+            x = _fast_update(transition_model, observation_model, h, L, i)
             return x, x
         x_l, x = jax.lax.scan(fast_body, x, jnp.arange(l))
 
@@ -32,19 +33,21 @@ def filtering(observations: jnp.ndarray,
     return xs, hs
 
 
-def _fast_update(transition_model, observation_model, h, j):
+def _fast_update(transition_model, observation_model, h, L, i):
     i = j + 1
     m_h, P_h = h
     nx = m_h.shape[0]
     A, Bi_vec, A_bar, B_bar, b_bar, Q, Bb_bar, Q_bar = transition_model
     C, R = observation_model
 
-    B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
-    b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
-    A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
-    c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
+    # Cbar_i =  ..
 
-    m_x = A_tilda_i @ m_h + c_i
+    # B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
+    # b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
+    # A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
+    # c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
+    #
+    # m_x = A_tilda_i @ m_h + c_i
     return MVNStandard(m_h, P_h)  # check this line not correct
 
 
@@ -66,11 +69,11 @@ def _fast_update(transition_model, observation_model, h, j):
 #     return MVNStandard(m_h, P_h)  # check this line not correct
 
 
-def _integrated_predict(transition_model, x):
+def _integrated_predict(slow_rate_params, x):
     m, P = x
-    A, Bi_vec, A_bar, B_bar, b_bar, Q, Bb_bar, Q_bar = transition_model
+    A_bar, _, _, G_bar, Bu_bar, Q_bar = slow_rate_params
 
-    m = A_bar @ m + Bb_bar
+    m = A_bar @ m + Bu_bar
     P = A_bar @ P @ A_bar.T + Q_bar
 
     return MVNStandard(m, P)
@@ -87,6 +90,6 @@ def _integrated_update(observation_model, h, y):
 
     m = m + L @ y_diff
     P = P - L @ C @ P
-    return MVNStandard(m, P)
+    return MVNStandard(m, P), L
 
 
