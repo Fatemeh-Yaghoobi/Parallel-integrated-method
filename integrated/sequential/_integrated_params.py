@@ -24,7 +24,7 @@ def _slow_rate_integrated_params(transition_model, l: int):
 
 def _fast_rate_integrated_params(transition_model, i: int, l: int):
     A, B, u, Q = transition_model
-    A_bar, _, _, G_bar, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)
+    A_bar, G_bar, _, _, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)
     # C, R = observation_model
 
     ubar_f = jnp.array(jnp.stack([u] * i))                                     # [u u ... u],                  dim: i x nu x 1
@@ -37,18 +37,19 @@ def _fast_rate_integrated_params(transition_model, i: int, l: int):
     Bu_i_bar = jnp.einsum('ikl,ilm->km', Bbar_i_f, ubar_f).reshape(-1, )                      # dim: nx,
     c_i_f = Bu_i_bar - At_i @ Bu_bar                                                          # dim: nx,
 
-    return ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f
+    G_bar_i = G_bar[:i]                                                                      # dim: i x nx x nx
+    return ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i
 
 def _test_fast_rate_integrated_params(transition_model, i, l):
     A, B, u, Q = transition_model
     I = jnp.eye(*A.shape)
-    ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f = _fast_rate_integrated_params(transition_model, i, l)
+    ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i = _fast_rate_integrated_params(transition_model, i, l)
     # numpy.testing.assert_array_equal(ubar_f.shape, (i, B.shape[1], 1))
     # numpy.testing.assert_allclose(Gbar_i_f, jnp.array([A, I]), rtol=1e-06, atol=0)
     # numpy.testing.assert_allclose(Bbar_i_f, jnp.array([A @ B, B]), rtol=1e-06, atol=0)
 
 
-def _test_slow_rate_integrated_params(transition_model, l=3):
+def _test_slow_rate_integrated_params(transition_model, l):
     A, B, u, Q = transition_model
     I = jnp.eye(*A.shape)
     A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)
@@ -73,5 +74,5 @@ u = jnp.array([[1]])
 Q = jnp.eye(4)
 transition_model = LinearTran(A, B, u, Q)
 
-_test_slow_rate_integrated_params(transition_model)
+_test_slow_rate_integrated_params(transition_model, l=3)
 _test_fast_rate_integrated_params(transition_model, i=2, l=3)
