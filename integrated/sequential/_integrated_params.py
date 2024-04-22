@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import numpy
 from jax.lax import associative_scan, dynamic_slice
 
-from integrated._base import LinearTran, LinearObs
+from integrated._base import LinearTran
 
 
 def _slow_rate_integrated_params(transition_model, l: int):
@@ -25,7 +25,6 @@ def _slow_rate_integrated_params(transition_model, l: int):
 def _fast_rate_integrated_params(transition_model, i: int, l: int):
     A, B, u, Q = transition_model
     A_bar, G_bar, _, _, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)
-    # C, R = observation_model
 
     ubar_f = jnp.array(jnp.stack([u] * i))                                     # [u u ... u],                  dim: i x nu x 1
     A_I_tensor = jnp.stack([A] * (i - 1) + [jnp.eye(*A.shape)])                # [A,.., A, I],                 dim: i x nx x nx
@@ -37,22 +36,27 @@ def _fast_rate_integrated_params(transition_model, i: int, l: int):
     Bu_i_bar = jnp.einsum('ikl,ilm->km', Bbar_i_f, ubar_f).reshape(-1, )                      # dim: nx,
     c_i_f = Bu_i_bar - At_i @ Bu_bar                                                          # dim: nx,
 
-    G_bar_i = G_bar[:i]                                                                      # dim: i x nx x nx
-    return ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i
+    Q_f = jnp.sum(Gbar_i_f @ Q @ jnp.transpose(Gbar_i_f, axes=(0, 2, 1)), axis=0)             # dim: nx x nx
+    G_bar_i = G_bar[:i]                                                                       # dim: i x nx x nx
+    return ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i, Q_f, Q_bar, Q
+
 
 def _test_fast_rate_integrated_params(transition_model, i, l):
     A, B, u, Q = transition_model
     I = jnp.eye(*A.shape)
-    ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i = _fast_rate_integrated_params(transition_model, i, l)
-    # numpy.testing.assert_array_equal(ubar_f.shape, (i, B.shape[1], 1))
-    # numpy.testing.assert_allclose(Gbar_i_f, jnp.array([A, I]), rtol=1e-06, atol=0)
-    # numpy.testing.assert_allclose(Bbar_i_f, jnp.array([A @ B, B]), rtol=1e-06, atol=0)
+    ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i, Q_f, Q_bar, Q = _fast_rate_integrated_params(transition_model, i, l)   # tests for i=2, l=3
+    numpy.testing.assert_array_equal(ubar_f.shape, (i, B.shape[1], 1))
+    numpy.testing.assert_allclose(Gbar_i_f, jnp.array([A, I]), rtol=1e-06, atol=0)
+    numpy.testing.assert_allclose(Bbar_i_f, jnp.array([A @ B, B]), rtol=1e-06, atol=0)
+    numpy.testing.assert_allclose(At_i, A @ A, rtol=1e-06, atol=0)
+    numpy.testing.assert_allclose(G_bar_i, jnp.array([1/l * (I + A + A @ A), 1/l * (I + A)]), rtol=1e-06, atol=0)
+    numpy.testing.assert_allclose(Q_f, (Gbar_i_f[0] @ Q @ Gbar_i_f[0].T + Gbar_i_f[1] @ Q @ Gbar_i_f[1].T), rtol=1e-06, atol=0)
 
 
 def _test_slow_rate_integrated_params(transition_model, l):
     A, B, u, Q = transition_model
     I = jnp.eye(*A.shape)
-    A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)
+    A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar = _slow_rate_integrated_params(transition_model, l)  # tests for l=3
     numpy.testing.assert_allclose(A_bar, 1/l * (A + A @ A + A @ A @ A), rtol=1e-06, atol=0)
     numpy.testing.assert_allclose(G_bar[0], 1/l * (I + A + A @ A), rtol=1e-06, atol=0)
     numpy.testing.assert_allclose(G_bar[-1], 1/l * I, rtol=1e-06, atol=0)

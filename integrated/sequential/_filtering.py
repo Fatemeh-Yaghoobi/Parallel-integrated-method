@@ -1,13 +1,9 @@
-from typing import Optional
-
 import jax
 import jax.numpy as jnp
-from jax.experimental.host_callback import id_print
-from jax.lax import scan, associative_scan
-from jax.scipy.linalg import cho_solve
 
 from integrated._base import MVNStandard, LinearTran, LinearObs, SlowRateIntegratedParams
-from integrated._utils import none_or_shift, none_or_concat
+from integrated._utils import none_or_concat
+from integrated.sequential._integrated_params import _fast_rate_integrated_params
 
 
 def filtering(observations: jnp.ndarray,
@@ -22,7 +18,7 @@ def filtering(observations: jnp.ndarray,
         h, L = _integrated_update(observation_model, h, y)
 
         def fast_body(_, i):
-            x = _fast_update(transition_model, observation_model, h, L, i)
+            x = _fast_update(transition_model, observation_model, h, L, i, l)
             return x, x
         x_l, x = jax.lax.scan(fast_body, x, jnp.arange(l))
 
@@ -33,45 +29,25 @@ def filtering(observations: jnp.ndarray,
     return xs, hs
 
 
-def _fast_update(transition_model, observation_model, h, L, i):
-    i = j + 1
+def _fast_update(transition_model, observation_model, h, L, i, l):
     m_h, P_h = h
-    nx = m_h.shape[0]
-    A, Bi_vec, A_bar, B_bar, b_bar, Q, Bb_bar, Q_bar = transition_model
-    C, R = observation_model
+    C, _ = observation_model
+    ubar_f, Gbar_i_f, Bbar_i_f, At_i, c_i_f, G_bar_i, Q_f, Q_bar, Q = _fast_rate_integrated_params(transition_model, i, l)
 
-    # Cbar_i =  ..
+    m_x_i = At_i @ m_h + c_i_f
 
-    # B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
-    # b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
-    # A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
-    # c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
-    #
-    # m_x = A_tilda_i @ m_h + c_i
-    return MVNStandard(m_h, P_h)  # check this line not correct
-
-
-
-# def _fast_update(transition_model, observation_model, h, j):
-#     i = j + 1
-#     m_h, P_h = h
-#     nx = m_h.shape[0]
-#     A, Bi_vec, A_bar, B_bar, b_bar, Q = transition_model
-#     C, R = observation_model
-#
-#     B_bar_i_f = jax.lax.dynamic_slice(Bi_vec, [0, 0, 0], [i, nx, nx])
-#     b_bar_f = jax.lax.dynamic_slice(b_bar, [0], [i])
-#     A_tilda_i = A**i @ jnp.linalg.inv(A_bar)
-#     c_i = B_bar_i_f @ b_bar_f - A_tilda_i @ B_bar @ b_bar # check
-#
-#     m_x = A_tilda_i @ m_h + c_i
-#     # P_x = A_tilda_i @ P_h @ A_tilda_i.T + jnp.sum(B_bar_i_f @ Q @ B_bar_i_f.T, axis=0) # check this line not complete
-#     return MVNStandard(m_h, P_h)  # check this line not correct
+    Cbar_i = At_i @ L @ C
+    temp = jnp.transpose(G_bar_i, axes=(0, 2, 1)) @ Cbar_i.T
+    Q_f_s = jnp.sum(Gbar_i_f @ Q @ temp, axis=0)
+    P_x_i = (At_i @ P_h @ At_i.T - Q_f_s - Q_f_s.T
+             + Cbar_i @ Q_bar @ At_i.T + At_i @ Q_bar @ Cbar_i.T
+             + Q_f - At_i @ Q_bar @ At_i.T)
+    return MVNStandard(m_x_i, P_x_i)
 
 
 def _integrated_predict(slow_rate_params, x):
     m, P = x
-    A_bar, _, _, G_bar, Bu_bar, Q_bar = slow_rate_params
+    A_bar, _, _, _, Bu_bar, Q_bar = slow_rate_params
 
     m = A_bar @ m + Bu_bar
     P = A_bar @ P @ A_bar.T + Q_bar
