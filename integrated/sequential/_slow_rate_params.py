@@ -1,10 +1,8 @@
-import jax
 import jax.numpy as jnp
 import numpy
-from jax._src.lax.control_flow import while_loop
-from jax.lax import associative_scan, dynamic_slice
+from jax.lax import associative_scan
 
-from integrated._base import LinearTran, MVNStandard
+from integrated._base import LinearTran
 
 
 def _slow_rate_integrated_params_init(transition_model, l: int):
@@ -27,7 +25,7 @@ def _slow_rate_integrated_params(transition_model, observation_model, l: int):
     _A_bar, _G_bar, _B_bar, u_bar, _, _, AI_associative = _slow_rate_integrated_params_init(transition_model, l)
     C, R = observation_model
     A, B, u, Q = transition_model
-    A_bar = jnp.matrix_power(A, l)
+    A_bar = jnp.linalg.matrix_power (A, l)
     G_bar = AI_associative
     B_bar = AI_associative @ B
     Q_bar = jnp.sum(G_bar @ Q @ jnp.transpose(G_bar, axes=(0, 2, 1)), axis=0)

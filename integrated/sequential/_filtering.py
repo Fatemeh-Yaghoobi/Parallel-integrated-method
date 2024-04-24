@@ -1,27 +1,23 @@
 import jax
 import jax.numpy as jnp
 
-from integrated._base import MVNStandard, LinearTran, LinearObs, SlowRateIntegratedParams
+from integrated._base import MVNStandard
 from integrated._utils import none_or_concat
-from integrated.sequential._integrated_params import _fast_rate_integrated_params
 
 
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
-              slow_rate_params,
-              l: int):
+              slow_rate_params):
+
     def body(carry, y):
-        xl_k_pred, xl_k_1 = carry
-        h = _integrated_predict(slow_rate_params, xl_k_1)
+        xl_k_1 = carry
+        x_predict = _integrated_predict(slow_rate_params, xl_k_1)
+        xl_k = _integrated_update(slow_rate_params, x_predict, xl_k_1, y)
+        return xl_k, xl_k
 
-
-
-    return
-
-
-    _, xs = jax.lax.scan(body, (x0, x0), observations)
+    _, xs = jax.lax.scan(body, x0, observations)
     xs = none_or_concat(xs, x0, 1)
-    return xs, hs
+    return xs
 
 
 def _integrated_predict(slow_rate_params, x):
@@ -40,7 +36,8 @@ def _integrated_update(slow_rate_params, xl_k_pred, xl_k_1, y):
     S = C_bar @ P_k_1 @ C_bar.T + Rx
     temp = A_bar @ P_k_1 @ C_bar.T + jnp.sum(G_bar @ Q @ jnp.transpose(M_bar, axes=(0, 2, 1)), axis=0)
     L = jax.scipy.linalg.solve(S, temp.T).T
-    m = m_ + L @ (y - C_bar @ m_k_1 - D_bar @ u_bar)
+    Du_bar = jnp.einsum('ikl,ilm->km', D_bar, u_bar).reshape(-1, )
+    m = m_ + L @ (y - C_bar @ m_k_1 - Du_bar)
     P = P_ - L @ temp.T
 
     return MVNStandard(m, P)
