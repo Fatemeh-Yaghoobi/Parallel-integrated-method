@@ -3,7 +3,7 @@ import jax.numpy as jnp
 
 from integrated._base import MVNStandard, LinearTran, LinearObs, SlowRateIntegratedParams
 from integrated._utils import none_or_concat
-from integrated.sequential._integrated_params import _fast_rate_integrated_params
+from integrated.inegrated_params._integrated_params import _fast_rate_integrated_params
 
 
 def filtering(observations: jnp.ndarray,

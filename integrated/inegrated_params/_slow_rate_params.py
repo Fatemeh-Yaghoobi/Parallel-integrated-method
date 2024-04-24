@@ -33,8 +33,9 @@ def _slow_rate_integrated_params(transition_model, observation_model, l: int):
     M_bar = C @ _G_bar
     D_bar = C @ _B_bar
     Bu_bar = jnp.einsum('ikl,ilm->km', B_bar, u_bar).reshape(-1, )
+    Du_bar = jnp.einsum('ikl,ilm->km', D_bar, u_bar).reshape(-1, )
     Rx = jnp.sum(M_bar @ Q @ jnp.transpose(M_bar, axes=(0, 2, 1)), axis=0) + R
-    return A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar, C_bar, M_bar, D_bar, Rx, Q
+    return A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar, C_bar, M_bar, D_bar, Rx, Q, Du_bar
 
 
 
