@@ -5,7 +5,7 @@ import time
 
 from jax import jit
 from matplotlib import pyplot as plt
-from tqdm import tqdm
+# from tqdm import tqdm
 
 jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
@@ -36,19 +36,18 @@ def func(method, lengths, n_runs=100):
     res_mean = []
     res_median = []
     for k, j in enumerate(lengths):
-        print(f"Iteration {k + 1} out of {len(lengths)}", end="\r")
+        print(f"Iteration {k + 1} out of {len(lengths)}", end = '\n')
         observations_slice = y[:j]
-        args = observations_slice
-        s = method(*args)
+        s = method(observations_slice)
         s.mean.block_until_ready()
         run_times = []
         for i in range(n_runs):
             tic = time.time()
-            s_states = method(*args)
+            s_states = method(observations_slice)
             s_states.mean.block_until_ready()
             toc = time.time()
             run_times.append(toc - tic)
-            print(f"run {i + 1} out of {n_runs}", end="\r")
+            print(f"run {i + 1} out of {n_runs}", end = '\n')
         res_mean.append(np.mean(run_times))
         res_median.append(np.median(run_times))
     print()

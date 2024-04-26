@@ -30,17 +30,17 @@ observation_model = model.ObsParams()
 slow_rate_params = _slow_rate_integrated_params(transition_model, observation_model, l)
 
 
-sequential_filtered = integrated_filtering(y, prior_x, slow_rate_params)
-sequential_smoothed = integrated_smoothing(sequential_filtered, slow_rate_params)
+# sequential_filtered = integrated_filtering(y, prior_x, slow_rate_params)
+# sequential_smoothed = integrated_smoothing(sequential_filtered, slow_rate_params)
 
 parallel_filtered = parallel_filtering(y, prior_x, slow_rate_params)
 parallel_smoothed = parallel_smoothing(parallel_filtered, slow_rate_params)
-
-plt.semilogx(range(l, len(x), l), sequential_filtered.mean[1:, 0], '--', color='y', label='filtered x')
-plt.semilogx(range(l, len(x), l), sequential_smoothed.mean[1:, 0], '--', color='g', label='smoothed x')
-plt.semilogx(range(l, len(x), l), x[1::l, 0], '--', color='b', label='true x')
-plt.plot(range(l, len(x), l), parallel_filtered.mean[1:, 0], '*--', color='r', label='parallel filtered x')
-plt.legend()
-plt.show()
+#
+# plt.semilogx(range(l, len(x), l), sequential_filtered.mean[1:, 0], '--', color='y', label='filtered x')
+# plt.semilogx(range(l, len(x), l), sequential_smoothed.mean[1:, 0], '--', color='g', label='smoothed x')
+# plt.semilogx(range(l, len(x), l), x[1::l, 0], '--', color='b', label='true x')
+# plt.plot(range(l, len(x), l), parallel_filtered.mean[1:, 0], '*--', color='r', label='parallel filtered x')
+# plt.legend()
+# plt.show()
 
 
