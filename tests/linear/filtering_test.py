@@ -1,18 +1,19 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 from matplotlib import pyplot as plt
 
 jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
 from integrated.inegrated_params._slow_rate_params import _slow_rate_integrated_params
-from integrated.sequential import integrated_filtering
-from integrated.parallel import parallel_filtering
+from integrated.sequential import integrated_filtering, integrated_smoothing
+from integrated.parallel import parallel_filtering, parallel_smoothing
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-l = 5
-N = 150
+l = 10
+N = 1500
 nx = 4
 ny = 2
 Q = 1
@@ -28,12 +29,17 @@ transition_model = model.TranParams()
 observation_model = model.ObsParams()
 slow_rate_params = _slow_rate_integrated_params(transition_model, observation_model, l)
 
-result = integrated_filtering(y, prior_x, slow_rate_params)
-par_res = parallel_filtering(y, prior_x, slow_rate_params)
 
+sequential_filtered = integrated_filtering(y, prior_x, slow_rate_params)
+sequential_smoothed = integrated_smoothing(sequential_filtered, slow_rate_params)
 
-plt.plot(range(l, len(x), l), result.mean[1:, 0], 'o--', color='y', label='filtered x')
-plt.plot(range(l, len(x), l), par_res.mean[1:, 0], '*--', color='r', label='parallel filtered x')
+parallel_filtered = parallel_filtering(y, prior_x, slow_rate_params)
+parallel_smoothed = parallel_smoothing(parallel_filtered, slow_rate_params)
+
+plt.semilogx(range(l, len(x), l), sequential_filtered.mean[1:, 0], '--', color='y', label='filtered x')
+plt.semilogx(range(l, len(x), l), sequential_smoothed.mean[1:, 0], '--', color='g', label='smoothed x')
+plt.semilogx(range(l, len(x), l), x[1::l, 0], '--', color='b', label='true x')
+plt.plot(range(l, len(x), l), parallel_filtered.mean[1:, 0], '*--', color='r', label='parallel filtered x')
 plt.legend()
 plt.show()
 

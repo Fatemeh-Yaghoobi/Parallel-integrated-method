@@ -10,3 +10,10 @@ def none_or_concat(x, y, position=1):
     else:
         return jax.tree_map(lambda a, b: jnp.concatenate([b, a[None, ...]]), y, x)
 
+
+def none_or_shift(x, shift):
+    if x is None:
+        return None
+    if shift > 0:
+        return jax.tree_map(lambda z: z[shift:], x)
+    return jax.tree_map(lambda z: z[:shift], x)

@@ -4,7 +4,7 @@ import jax.scipy.linalg as jlinalg
 
 def filtering_operator(elem1, elem2):
     """
-    Associative operator described in https://ieeexplore.ieee.org/document/9013038 Equations 13 and 14.
+    Associative operator described in https://ieeexplore.ieee.org/document/9013038 Lemma 8.
 
     Parameters
     ----------
@@ -36,3 +36,26 @@ def filtering_operator(elem1, elem2):
     eta = jnp.dot(AIpJC_inv, eta2 - jnp.dot(J2, b1)) + eta1
     J = jnp.dot(AIpJC_inv, jnp.dot(J2, A1)) + J1
     return A, b, C, eta, J
+
+def standard_smoothing_operator(elem1, elem2):
+    """
+    Associative operator described in https://ieeexplore.ieee.org/document/9013038 Lemma 10.
+
+    Parameters
+    ----------
+    elem1: tuple of array
+        ...
+    elem2: tuple of array
+        ...
+
+    Returns
+    -------
+
+    """
+    g1, E1, L1 = elem1
+    g2, E2, L2 = elem2
+
+    g = E2 @ g1 + g2
+    E = E2 @ E1
+    L = E2 @ L1 @ E2.T + L2
+    return g, E, L
