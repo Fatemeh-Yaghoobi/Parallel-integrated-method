@@ -56,13 +56,13 @@ def _test_slow_rate_integrated_params(transition_model, l):
                                   G_bar[0] @ Q @ G_bar[0].T + G_bar[1] @ Q @ G_bar[1].T + G_bar[2] @ Q @ G_bar[2].T,
                                   rtol=1e-06, atol=0)
 
-A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
-                   [1.2081, 0.0738, 0.0763, 0.4087],
-                   [0.7331, 0.0674, 0.0878, 0.8767],
-                   [0.0172, 0.0047, 0.0114, 0.9123]])
-B = jnp.array([[0, 0, 0, 1]]).T
-u = jnp.array([[1]])
-Q = jnp.eye(4)
-transition_model = LinearTran(A, B, u, Q)
-
-_test_slow_rate_integrated_params(transition_model, l=3)
+# A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
+#                    [1.2081, 0.0738, 0.0763, 0.4087],
+#                    [0.7331, 0.0674, 0.0878, 0.8767],
+#                    [0.0172, 0.0047, 0.0114, 0.9123]])
+# B = jnp.array([[0, 0, 0, 1]]).T
+# u = jnp.array([[1]])
+# Q = jnp.eye(4)
+# transition_model = LinearTran(A, B, u, Q)
+#
+# _test_slow_rate_integrated_params(transition_model, l=3)
