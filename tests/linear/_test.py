@@ -2,72 +2,56 @@ from typing import Optional
 
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jax.experimental.host_callback import id_print
 from jax.lax import scan, associative_scan
 from jax.scipy.linalg import cho_solve
-
-from integrated._base import MVNStandard, LinearIntegrated, LinearIntegratedObs
-from integrated._utils import none_or_shift, none_or_concat
-
-def integrated_parameters(A, l):
-    def body(_, j):
-        i = l - j
-        A_vec = A ** (i - 1)
-        Bi_vec = A ** j
-        return _, (A_vec, Bi_vec)
-    _, (A_vec, Bi_vec) = scan(body, None, jnp.arange(l))
-    A_bar = (1 / l) * jnp.sum(A @ A_vec, axis=0)
-    B_bar = (1 / l) * associative_scan(jnp.add, A_vec, reverse=True)
-    return A_vec, Bi_vec
+from jax.scipy.linalg import solve
+jax.config.update("jax_enable_x64", True)
 
 
-A = jnp.array([[2]])
-l = 2
-c = jnp.array([1, 2])
-Q = jnp.eye(1)
-h = MVNStandard(jnp.array([3]), jnp.eye(1))
-
-def fast_state(A, c, Q, h, i):
-    def fast_body(_, k):
-        y = A**k @ Q @ (A**k).T
-        return _, y
-    _, ys = jax.lax.scan(fast_body, None, jnp.arange(i))
-    Pxi = jnp.sum(ys, axis=0)
-    mxi = A**i @ h.mean @ (A**i).T + c[i-1]
-    return MVNStandard(mxi, Pxi)
-
-# print(Q + A @ Q @ A.T, A**2@h.mean@(A**2).T + c[1])
-# i = 2
-# res = fast_state(A, c, Q, h, i)
-# print(res)
-#
-# vmap_func = jax.vmap(fast_state, in_axes=(None, None, None, None, 0))
-# i = jnp.array([1, 2])
-# res_vmap = vmap_func(A, c, Q, h, i)
-# print(res_vmap)
 
 
-import jax.numpy as jnp
-from jax import lax
 
+l = 20
+nx = 4
+D = jnp.zeros((l, nx, nx)) + 2
+D = D.at[0].set(jnp.eye(nx))
+D = D.at[0, 0, :].set(jnp.array([1, 2, 3, 4]))
+J = jnp.eye(nx) * 3
+J = J.at[0, :].set(jnp.array([1, 2, 3, 4]))
+J2 = jnp.stack([J] * l)
 
-def lower_block_triangular_matrix(A, n):
-    def body(carry, _):
-        carry = A @ carry
-        return carry, carry
-    _, lower_blocks = jax.lax.scan(body, A, jnp.arange(n))
-    return lower_blocks
+DJ = jnp.einsum('ijk,km->ijm', D, J) + jnp.eye(nx)
+DJ2 = jnp.einsum('ijk,ikm->ijm', D, J2) + jnp.eye(nx)
+np.testing.assert_array_equal(DJ, DJ2)
+np.testing.assert_array_equal(DJ[0], D[0]@J + jnp.eye(nx))
+np.testing.assert_array_equal(DJ[1], D[1]@J + jnp.eye(nx))
+####
+JD = jnp.einsum('ij,kjm->kim', J, D) + jnp.eye(nx)
+J2D = jnp.einsum('kij,kjm->kim', J2, D) + jnp.eye(nx)
+np.testing.assert_array_equal(JD, J2D)
+np.testing.assert_array_equal(JD[0], J@D[0] + jnp.eye(nx))
+np.testing.assert_array_equal(JD[1], J@D[1] + jnp.eye(nx))
+#### solve
+vmap_solve = jax.vmap(solve, in_axes=(0, 0))
+F = D + 3 # l x nx x nx
+F_DJinvT = vmap_solve(jnp.transpose(DJ, axes=(0, 2, 1)), jnp.transpose(F, axes=(0, 2, 1)))
+F_DJinv = jnp.transpose(F_DJinvT, axes=(0, 2, 1))
+i = 10
+np.testing.assert_allclose(F_DJinv[i], solve(DJ[i].T, F[i].T).T, rtol=1e-10, atol=1e-10)
 
-
-# Example usage
-A = jnp.array([[1, 2, 3],
-               [4, 5, 6],
-               [7, 8, 9]])
-
-n = 4  # Size of the resulting matrix
-result_matrix = lower_block_triangular_matrix(A, n)
-# print(result_matrix)
-
-func = lambda j: jnp.linalg.matrix_power(A, j)
-result = jax.vmap(func)(jnp.arange(1, 1))
-print(result)
+res = F_DJinv @ D
+np.testing.assert_allclose(res[i], F_DJinv[i] @ D[i], rtol=1e-10, atol=1e-10)
+####
+eta = jnp.array([1, 2, 3, 4])
+D_eta = jnp.einsum('ijk,k->ij', D, eta)
+np.testing.assert_allclose(D_eta[i], D[i] @ eta, rtol=1e-15, atol=1e-15)
+###
+di = jnp.array([[1, 2, 3, 4], [2, 4, 6, 8]])
+print(di.shape)
+print(J.shape)
+temp = jnp.einsum('ij,kj->ki', J, di)
+np.testing.assert_allclose(temp[0], J @ di[0], rtol=1e-15, atol=1e-15)
+np.testing.assert_allclose(temp[1], J @ di[1], rtol=1e-15, atol=1e-15)
+print(temp.shape)

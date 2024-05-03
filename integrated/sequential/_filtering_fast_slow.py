@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-
+jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
 from integrated._utils import none_or_concat
 
@@ -37,7 +37,7 @@ def _integrated_update(all_params, x_predict_interval, xl_k_1, y):
 
     S = C_bar @ P_k_1 @ C_bar.T + Rx  # dim = ny x ny
     temp = (Abar @ P_k_1 @ C_bar.T
-            + jnp.einsum('ijkl,ilm->ikm', Gbar @ Q, jnp.transpose(M_bar, axes=(0, 2, 1))))   # dim = l x nx x ny
+            + jnp.einsum('ijkl,jlm->ikm', Gbar @ Q, jnp.transpose(M_bar, axes=(0, 2, 1))))   # dim = l x nx x ny
 
     vmap_func = jax.vmap(jax.scipy.linalg.solve, in_axes=(None, 0))
     TranL = vmap_func(S, jnp.transpose(temp, axes=(0, 2, 1)))
