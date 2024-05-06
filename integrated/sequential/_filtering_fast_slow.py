@@ -44,9 +44,9 @@ def _integrated_update(all_params, x_predict_interval, xl_k_1, y):
 
     vmap_func = jax.vmap(jax.scipy.linalg.solve, in_axes=(None, 0))
     TranL = vmap_func(S, jnp.transpose(temp, axes=(0, 2, 1)))
-    L = jnp.transpose(TranL, axes=(0, 2, 1))                                                   # dim = l x nx x ny
+    L = jnp.transpose(TranL, axes=(0, 2, 1))                                                 # dim = l x nx x ny
 
-    m = m_ + jnp.einsum('ijk,k->ij', L, y -  C_bar @ m_k_1 - Du_bar)                        # dim = l x nx
+    m = m_ + jnp.einsum('ijk,k->ij', L, y -  C_bar @ m_k_1 - Du_bar)                         # dim = l x nx
     tempT = jnp.transpose(temp, axes=(0, 2, 1))                                              # dim = l x ny x nx
     P = P_ - jnp.einsum('ijk,ikl->ijl', L, tempT)                                            # dim = l x nx x nx
 
