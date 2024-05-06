@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+
 jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
 from integrated._utils import none_or_concat
@@ -35,14 +36,15 @@ def _integrated_update(all_params, x_predict_interval, xl_k_1, y):
     m_k_1, P_k_1 = xl_k_1
     Abar, Bbar, Gbar, Bbar_u, Qbar, C_bar, M_bar, D_bar, Rx, Q, Du_bar = all_params
 
-    S = C_bar @ P_k_1 @ C_bar.T + Rx  # dim = ny x ny
+    S = C_bar @ P_k_1 @ C_bar.T + Rx                                                      # dim = ny x ny
     temp = (Abar @ P_k_1 @ C_bar.T
-            + jnp.einsum('ijkl,jlm->ikm', Gbar @ Q, jnp.transpose(M_bar, axes=(0, 2, 1))))   # dim = l x nx x ny
+            + jnp.einsum('ijkl,jlm->ikm',
+                         Gbar @ Q, jnp.transpose(M_bar, axes=(0, 2, 1))))                 # dim = l x nx x ny
+
 
     vmap_func = jax.vmap(jax.scipy.linalg.solve, in_axes=(None, 0))
     TranL = vmap_func(S, jnp.transpose(temp, axes=(0, 2, 1)))
-    L = jnp.transpose(TranL, axes=(0, 2, 1))                                                 # dim = l x nx x ny
-    # Cbar_m = jnp.einsum('ij,lj->li', C_bar, m_k_1)                                           # dim = l x ny
+    L = jnp.transpose(TranL, axes=(0, 2, 1))                                                   # dim = l x nx x ny
 
     m = m_ + jnp.einsum('ijk,k->ij', L, y -  C_bar @ m_k_1 - Du_bar)                        # dim = l x nx
     tempT = jnp.transpose(temp, axes=(0, 2, 1))                                              # dim = l x ny x nx

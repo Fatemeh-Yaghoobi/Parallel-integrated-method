@@ -42,9 +42,9 @@ def filtering_operator(elem1, elem2):
     b = jnp.einsum('ijk,ik->ij', AIpCJ_inv, b1 + jnp.einsum('ijk,ik->ij', C1, eta2)) + b2
     C = AIpCJ_inv @ (C1 @ jnp.transpose(A2, axes=(0, 2, 1))) + C2       # dim = l x nx x nx
 
-    temp = jnp.einsum('ijk,ik->ij', J2, b1)                              # dim = l x nx
-    eta = jnp.einsum('ijk,ik->ij', AIpJC_inv, eta2 - temp) + eta1       # dim = l x nx
-    J = AIpJC_inv @ (J2 @ A1) + J1                                      # dim = l x nx x nx
+    temp = jnp.einsum('ijk,ik->ij', J2, b1)                                 # dim = l x nx
+    eta = jnp.einsum('ijk,ik->ij', AIpJC_inv, eta2 - temp) + eta1           # dim = l x nx
+    J = AIpJC_inv @ (J2 @ A1) + J1                                          # dim = l x nx x nx
     return A, b, C, eta, J
 
 

@@ -9,12 +9,8 @@ from integrated.parallel._operator_fast_slow import filtering_operator
 def filtering(observations: jnp.ndarray,
               x0: MVNStandard,
               all_params):
-    m0, P0 = x0
     associative_params = _standard_associative_params(all_params, x0, observations)
     _, filtered_means, filtered_cov, _, _ = jax.lax.associative_scan(jax.vmap(filtering_operator), associative_params)
-
-    # filtered_means = none_or_concat(filtered_means, m0, position=1)
-    # filtered_cov = none_or_concat(filtered_cov, P0, position=1)
 
     res = jax.vmap(MVNStandard)(filtered_means, filtered_cov)
 

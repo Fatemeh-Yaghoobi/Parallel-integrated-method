@@ -27,23 +27,7 @@ def _fast_and_slow_params(transition_model, observation_model, l: int):
     Bbar_u= jnp.einsum('ijkl,jlm->ikm', Bbar, u_tensor).reshape(l, -1)               # dim: l x nx
     GbarT = jnp.transpose(Gbar, axes=(0, 1, 3, 2))
     Qbar = jnp.einsum('ijkl,ijlm->ikm', Gbar @ Q, GbarT)                             # dim: l x nx x nx
-    AbarT = jnp.transpose(Abar, axes=(0, 2, 1))
     _, _, _, _, _, _, C_bar, M_bar, D_bar, Rx, Q, Du_bar = _slow_rate_integrated_params(transition_model, observation_model, l)
-    # a = jnp.array([1, 2, 3, 4])
-    # m_k_1 = jnp.stack([a] * l)
-    # Cm = jnp.einsum('ij,lj->li', C_bar, m_k_1)  # dim = l x ny
-    # np.testing.assert_allclose(Cm[1], C_bar @ m_k_1[1])
-
-    # S = C_bar @ Q @ C_bar.T + Rx
-    # temp =jnp.einsum('ijkl,jlm->ikm', Gbar @ Q, jnp.transpose(M_bar, axes=(0, 2, 1)))
-    # print(temp.shape)
-    # out1 = Gbar[-1] @ Q
-    # out2 = A @ A @ Q @ M_bar[0].T + A@Q @ M_bar[1].T + Q @ M_bar[2].T
-    # np.testing.assert_allclose(temp[2], out2)
-    # invT = jax.scipy.linalg.solve(S, jnp.transpose(temp, axes=(0, 2, 1)))
-    # vmap_func = jax.vmap(jax.scipy.linalg.solve, in_axes=(None, 0))
-    # invT = vmap_func(S, jnp.transpose(temp, axes=(0, 2, 1)))
-    # inv = jnp.transpose(invT, axes=(0, 2, 1))
     return Abar, Bbar, Gbar, Bbar_u, Qbar, C_bar, M_bar, D_bar, Rx, Q, Du_bar
 
 
