@@ -36,7 +36,8 @@ def _integrated_update(all_params, x_predict_interval, y):
     y_diff= y - jnp.einsum('ijk,ik->j', H, m_)
     S = H[0] @ jnp.sum(P_, axis=0) @ H[0].T + R
     temp = P_ @ H[0].T
-    KT = jnp.linalg.solve(S, jnp.transpose(temp, axes=(0, 2, 1)))
+    vmap_solve = jax.vmap(jnp.linalg.solve, in_axes=(None, 0))
+    KT = vmap_solve(S, jnp.transpose(temp, axes=(0, 2, 1)))
     K = jnp.transpose(KT, axes=(0, 2, 1))
 
     m = m_ + jnp.einsum('ijk,k->ij', K, y_diff)
