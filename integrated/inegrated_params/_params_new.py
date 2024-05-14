@@ -28,22 +28,6 @@ def _fast_and_slow_params(transition_model, observation_model, l: int):
 
     C, R = observation_model
     H = jnp.stack([C] * l) / l                                                       # [C, C, ..., C]/l,      dim: l x ny x nx
-
     return Abar, Bbar, Gbar, Bbar_u, Qbar, H, R
 
-
-A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
-               [1.2081, 0.0738, 0.0763, 0.4087],
-               [0.7331, 0.0674, 0.0878, 0.8767],
-               [0.0172, 0.0047, 0.0114, 0.9123]])
-B = jnp.array([[0, 0, 0, 1]]).T
-u = jnp.array([[1]])
-Q = 0.5 * jnp.eye(4)
-transition_model = LinearTran(A, B, u, Q)
-C = jnp.array([[1, 0, 0, 0],
-               [0, 0, 0, 1]])
-cov = jnp.eye(2)
-observation_model = LinearObs(C, cov)
-l = 3
-Abar, Bbar, Gbar, Bbar_u, Qbar, H, R = _fast_and_slow_params(transition_model, observation_model, l)
 

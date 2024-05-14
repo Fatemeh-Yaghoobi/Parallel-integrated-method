@@ -1,8 +1,10 @@
 import jax.numpy as jnp
 import numpy
+import numpy as np
 from jax.lax import associative_scan
+from tests.linear.model import DistillationSSM
 
-from integrated._base import LinearTran
+from integrated._base import LinearTran, MVNStandard
 
 
 def _slow_rate_integrated_params_init(transition_model, l: int):
@@ -40,29 +42,19 @@ def _slow_rate_integrated_params(transition_model, observation_model, l: int):
 
 
 
-def _test_slow_rate_integrated_params(transition_model, l):
-    A, B, u, Q = transition_model
-    I = jnp.eye(*A.shape)
-    A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar, _ = _slow_rate_integrated_params_init(transition_model, l)  # tests for l=3
-    numpy.testing.assert_allclose(A_bar, 1/l * (A + A @ A + A @ A @ A), rtol=1e-06, atol=0)
-    numpy.testing.assert_allclose(G_bar[0], 1/l * (I + A + A @ A), rtol=1e-06, atol=0)
-    numpy.testing.assert_allclose(G_bar[-1], 1/l * I, rtol=1e-06, atol=0)
-
-    numpy.testing.assert_allclose(B_bar[0], 1/l * (B + A @ B + A @ A @ B), rtol=1e-06, atol=0)
-    numpy.testing.assert_allclose(B_bar[-1], 1/l * B, rtol=1e-06, atol=0)
-    numpy.testing.assert_allclose(jnp.einsum('ikl,ilm->km', B_bar, u_bar).reshape(-1,),
-                                  (B_bar[0] @ u[0] + B_bar[1] @ u[1] + B_bar[2] @ u[2]), rtol=1e-06, atol=0)
-    numpy.testing.assert_allclose(Q_bar,
-                                  G_bar[0] @ Q @ G_bar[0].T + G_bar[1] @ Q @ G_bar[1].T + G_bar[2] @ Q @ G_bar[2].T,
-                                  rtol=1e-06, atol=0)
-
-# A = jnp.array([[0.8499, 0.0350, 0.0240, 0.0431],
-#                    [1.2081, 0.0738, 0.0763, 0.4087],
-#                    [0.7331, 0.0674, 0.0878, 0.8767],
-#                    [0.0172, 0.0047, 0.0114, 0.9123]])
-# B = jnp.array([[0, 0, 0, 1]]).T
-# u = jnp.array([[1]])
-# Q = jnp.eye(4)
-# transition_model = LinearTran(A, B, u, Q)
+# def _test_slow_rate_integrated_params(transition_model, l):
+#     A, B, u, Q = transition_model
+#     I = jnp.eye(*A.shape)
+#     A_bar, G_bar, B_bar, u_bar, Bu_bar, Q_bar, _ = _slow_rate_integrated_params_init(transition_model, l)  # tests for l=3
+#     numpy.testing.assert_allclose(A_bar, 1/l * (A + A @ A + A @ A @ A), rtol=1e-06, atol=0)
+#     numpy.testing.assert_allclose(G_bar[0], 1/l * (I + A + A @ A), rtol=1e-06, atol=0)
+#     numpy.testing.assert_allclose(G_bar[-1], 1/l * I, rtol=1e-06, atol=0)
 #
-# _test_slow_rate_integrated_params(transition_model, l=3)
+#     numpy.testing.assert_allclose(B_bar[0], 1/l * (B + A @ B + A @ A @ B), rtol=1e-06, atol=0)
+#     numpy.testing.assert_allclose(B_bar[-1], 1/l * B, rtol=1e-06, atol=0)
+#     numpy.testing.assert_allclose(jnp.einsum('ikl,ilm->km', B_bar, u_bar).reshape(-1,),
+#                                   (B_bar[0] @ u[0] + B_bar[1] @ u[1] + B_bar[2] @ u[2]), rtol=1e-06, atol=0)
+#     numpy.testing.assert_allclose(Q_bar,
+#                                   G_bar[0] @ Q @ G_bar[0].T + G_bar[1] @ Q @ G_bar[1].T + G_bar[2] @ Q @ G_bar[2].T,
+#                                   rtol=1e-06, atol=0)
+

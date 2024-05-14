@@ -39,13 +39,13 @@ sequential_smoothed_slow = integrated_smoothing(sequential_filtered_slow, parame
 ################################
 
 
-# parallel_filtered = parallel_filtering_fast_slow(y, prior_x, parameters_all)
+parallel_filtered = parallel_filtering_fast_slow(y, prior_x, parameters_all)
 sequential_filtered = all_filtering(y, prior_x, parameters_all)
 sequential_filter_new = new_filtering(y, prior_x, parameters_new)
 # parallel_filtered_slow = parallel_filtering(y, prior_x, parameters_slow)
 
 seq_res_all = sequential_filtered.mean.reshape(-1, 4)
-# par_res_all = parallel_filtered.mean.reshape(-1, 4)
+par_res_all = parallel_filtered.mean.reshape(-1, 4)
 seq_filter_new = sequential_filter_new.mean.reshape(-1, 4)
 
 
@@ -54,8 +54,8 @@ seq_filter_new = sequential_filter_new.mean.reshape(-1, 4)
 
 seq_filter_slow = integrated_filtering(y, prior_x, parameters_slow)
 # plt.plot(x[1:, 0], '--', color='b', label='true x')
-# plt.plot(seq_res_all[:, 0], '.--', color='r', label='sequential filtered x')
-# plt.plot(par_res_all[:, 0], '.--', color='g', label='parallel filtered x')
+plt.plot(seq_res_all[:, 0], '.--', color='r', label='sequential filtered x')
+plt.plot(par_res_all[:, 0], '.--', color='g', label='parallel filtered x')
 # plt.plot(seq_smooth_all[:, 0], '.--', color='y', label='sequential smoothed x')
 plt.plot(seq_filter_new[:, 0], '.--', color='g', label='new filtered x')
 plt.plot(range(l-1, len(x) - 1, l), seq_filter_slow.mean[1:, 0], '*--', color='r', label='sequential filter x - slow')
