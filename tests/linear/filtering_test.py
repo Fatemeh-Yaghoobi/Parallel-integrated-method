@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 from matplotlib import pyplot as plt
 
+jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
@@ -32,10 +33,11 @@ Params_FR = fast_rate_params(transition_model, l)
 
 
 sequential_filtered = integrated_filtering(y, prior_x, Params_SR)
-sequential_smoothed = integrated_smoothing(sequential_filtered, Params_SR)
+# sequential_smoothed = integrated_smoothing(sequential_filtered, Params_SR)
 #
-# parallel_filtered = parallel_filtering(y, prior_x, Params_SR)
+parallel_filtered = parallel_filtering(y, prior_x, Params_SR)
 # parallel_smoothed = parallel_smoothing(parallel_filtered, Params_SR)
+
 def fast_rate(fast_params, slow_result_k_1, slow_result_k):
     m_0, P_0 = slow_result_k_1
     m_l, P_l = slow_result_k
@@ -52,18 +54,18 @@ slow_result_k = MVNStandard(sequential_filtered.mean[1:, :], sequential_filtered
 fast_result = fast_vmap(Params_FR, slow_result_k_1, slow_result_k)
 fast_rate_result_seq_filter = fast_result.mean.reshape(-1, nx)
 
-smooth_slow_k_1 = MVNStandard(sequential_smoothed.mean[:-1, :], sequential_smoothed.cov[:-1, :])
-smooth_slow_k = MVNStandard(sequential_smoothed.mean[1:, :], sequential_smoothed.cov[1:, :])
-fast_result_smooth = fast_vmap(Params_FR, smooth_slow_k_1, smooth_slow_k)
-fast_rate_result_seq_smooth = fast_result_smooth.mean.reshape(-1, nx)
-
-plt.plot(fast_rate_result_seq_smooth[:, 0], label='fast rate x - smooth')
-plt.plot(fast_rate_result_seq_filter[:, 0], label='fast rate x - filter')
-plt.plot(range(l-1, len(x) - 1, l), sequential_filtered.mean[1:, 0], '--', color='y', label='filtered x')
+# smooth_slow_k_1 = MVNStandard(sequential_smoothed.mean[:-1, :], sequential_smoothed.cov[:-1, :])
+# smooth_slow_k = MVNStandard(sequential_smoothed.mean[1:, :], sequential_smoothed.cov[1:, :])
+# fast_result_smooth = fast_vmap(Params_FR, smooth_slow_k_1, smooth_slow_k)
+# fast_rate_result_seq_smooth = fast_result_smooth.mean.reshape(-1, nx)
+plt.figure(figsize=(10, 10))
+# plt.plot(fast_rate_result_seq_smooth[:, 0], label='fast rate x - smooth')
+# plt.plot(fast_rate_result_seq_filter[:, 0], label='fast rate x - filter')
+plt.plot(range(l-1, len(x) - 1, l), sequential_filtered.mean[1:, 0], '--', color='y', label='sequential filter')
 # plt.plot(range(l, len(x), l), sequential_smoothed.mean[1:, 0], '--', color='g', label='smoothed x')
 # # plt.plot(range(l, len(x), l), parallel_smoothed.mean[1:, 0], '--', color='r', label='parallel smoothed x')
-plt.plot(range(l, len(x), l), x[1::l, 0], '--', color='b', label='true x')
-# # plt.plot(range(l, len(x), l), parallel_filtered.mean[1:, 0], '*--', color='r', label='parallel filtered x')
+# plt.plot(range(l, len(x), l), x[1::l, 0], '--', color='b', label='true x')
+plt.plot(range(l, len(x), l), parallel_filtered.mean[1:, 0], '*--', color='r', label='parallel filter')
 plt.legend()
 plt.grid()
 plt.show()
