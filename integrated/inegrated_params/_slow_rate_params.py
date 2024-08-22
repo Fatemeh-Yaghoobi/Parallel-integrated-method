@@ -24,6 +24,11 @@ def _slow_rate_integrated_params_init(transition_model, l: int):
 
 
 def _slow_rate_integrated_params(transition_model, observation_model, l: int):
+    '''
+    Outputs are parameters in Equations 4 and 5 of the derivations.tex + some additional parameters like 'Q_bar', 'Rx' in Equations 6 and 7
+    Bu_bar: B_bar x u_bar
+    Du_bar: D_bar x u_bar
+    '''
     _A_bar, _G_bar, _B_bar, u_bar, _, _, AI_associative = _slow_rate_integrated_params_init(transition_model, l)
     C, R = observation_model
     A, B, u, Q = transition_model

@@ -1,14 +1,15 @@
 import jax
 import jax.numpy as jnp
-import numpy as np
 from jax.lax import associative_scan
 
 jax.config.update("jax_enable_x64", True)
 
-from integrated._base import LinearTran, LinearObs
-from integrated.inegrated_params._slow_rate_params import _slow_rate_integrated_params
 
 def _fast_rate_params(transition_model, l: int):
+    '''
+    Outputs are parameters in Equations 10
+
+    '''
     A, B, u, Q = transition_model
     u_tensor = jnp.stack([u] * (l-1))                                                # [u, u, ..., u],               dim: (l-1) x nu x 1
     I_A_tensor = jnp.stack([jnp.eye(*A.shape)] + [A] * (l - 2))                      # [I, A, A, A,.., A],           dim: (l-1) x nx x nx
@@ -25,5 +26,6 @@ def _fast_rate_params(transition_model, l: int):
     Bbar_u= jnp.einsum('ijkl,jlm->ikm', Bbar, u_tensor).reshape(l-1, -1)               # dim: (l-1) x nx
     GbarT = jnp.transpose(Gbar, axes=(0, 1, 3, 2))
     Qbar = jnp.einsum('ijkl,ijlm->ikm', Gbar @ Q, GbarT)                             # dim: (l-1) x nx x nx
+    print(Qbar)
     return Abar, Bbar, Gbar, Bbar_u, Qbar
 
