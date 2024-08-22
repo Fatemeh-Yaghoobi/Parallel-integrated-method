@@ -3,6 +3,8 @@ import jax.numpy as jnp
 import numpy as np
 from matplotlib import pyplot as plt
 
+from integrated._utils import none_or_concat
+
 jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
 
@@ -14,7 +16,7 @@ from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
 l = 10
-N = 50
+N = 2
 nx = 4
 ny = 2
 Q = 1
@@ -40,9 +42,11 @@ np.testing.assert_allclose(sequential_filtered.mean, parallel_filtered.mean, rto
 m_l_k_1 = sequential_filtered.mean[:-1]
 P_l_k_1 = sequential_filtered.cov[:-1]
 vmap_func = jax.vmap(filtering_fast_rate, in_axes=(0, None, 0))
-fast_rate_result_filtered = vmap_func(y, Params_FR, MVNStandard(m_l_k_1, P_l_k_1))
-plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 0], '.--', label='fast_rate_result_filtered', color='red')
-plt.plot(range(l-1, len(x) - 1, l), sequential_filtered.mean[1:, 0], '*--', color='b', label='sequential filter x - slow')
+fast_rate_result_filtered_ = vmap_func(y, Params_FR, MVNStandard(m_l_k_1, P_l_k_1))
+fast_rate_result_filtered = none_or_concat(MVNStandard(fast_rate_result_filtered_.mean.reshape(-1, 4), fast_rate_result_filtered_.cov.reshape(-1, 4, 4)),
+                                           MVNStandard(sequential_filtered.mean[-1], sequential_filtered.cov[-1]), 0)
+plt.plot(range(0, len(x) , l), sequential_filtered.mean[:, 1], '*--', color='b', label='sequential filter - slow')
+plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 1], '*', color='r',  label='filter - fast')
 plt.show()
 
 ### Smoothing - Slow rate - Sequential and Parallel ###
