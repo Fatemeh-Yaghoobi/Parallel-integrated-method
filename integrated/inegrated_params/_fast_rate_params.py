@@ -23,9 +23,8 @@ def _fast_rate_params(transition_model, l: int):
             if i >= j:
                 Gbar = Gbar.at[i, j, :, :].set(IA_associative[i - j, :, :])          # dim: (l-1) x (l-1) x nx x nx
                 Bbar = Bbar.at[i, j, :, :].set(IA_associative[i - j, :, :] @ B)      # dim: (l-1) x (l-1) x nx x nu
-    Bbar_u= jnp.einsum('ijkl,jlm->ikm', Bbar, u_tensor).reshape(l-1, -1)               # dim: (l-1) x nx
+    Bbar_u= jnp.einsum('ijkl,jlm->ikm', Bbar, u_tensor).reshape(l-1, -1)             # dim: (l-1) x nx
     GbarT = jnp.transpose(Gbar, axes=(0, 1, 3, 2))
     Qbar = jnp.einsum('ijkl,ijlm->ikm', Gbar @ Q, GbarT)                             # dim: (l-1) x nx x nx
-    print(Qbar)
     return Abar, Bbar, Gbar, Bbar_u, Qbar
 

@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-import numpy as np
 from jax.lax import associative_scan
 
 jax.config.update("jax_enable_x64", True)

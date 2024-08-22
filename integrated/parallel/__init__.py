@@ -1,3 +1,3 @@
-from ._filtering import filtering as parallel_filtering
-from ._smoothing import smoothing as parallel_smoothing
+from ._filtering_slow_rate import filtering as par_filtering_slow_rate
+from ._smoothing_slow_rate import smoothing as par_smoothing_slow_rate
 from ._filtering_fast_slow import filtering as parallel_filtering_fast_slow
