@@ -1,10 +1,5 @@
 import jax.numpy as jnp
-import numpy
-import numpy as np
 from jax.lax import associative_scan
-from tests.linear.model import DistillationSSM
-
-from integrated._base import LinearTran, MVNStandard
 
 
 def _slow_rate_integrated_params_init(transition_model, l: int):

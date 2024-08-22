@@ -26,5 +26,6 @@ def _fast_params(transition_model, observation_model, l: int):
     GbarT = jnp.transpose(Gbar, axes=(0, 1, 3, 2))
     Qbar = jnp.einsum('ijkl,ijlm->ikm', Gbar @ Q, GbarT)                             # dim: (l-1) x nx x nx
     _, _, _, _, _, _, C_bar, M_bar, D_bar, Rx, Q, Du_bar = _slow_rate_integrated_params(transition_model, observation_model, l)
-    return Abar, Bbar, Gbar, Bbar_u, Qbar, C_bar, M_bar, D_bar, Rx, Q, Du_bar
+    M_bar_l_1 = M_bar[:-1]
+    return Abar, Bbar, Gbar, Bbar_u, Qbar, C_bar, M_bar_l_1, D_bar, Rx, Q, Du_bar
 

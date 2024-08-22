@@ -8,8 +8,8 @@ jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
 from integrated.inegrated_params import slow_rate_params, fast_rate_params
-from integrated.sequential import integrated_filtering, integrated_smoothing
-from integrated.parallel import parallel_filtering, parallel_smoothing
+from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate
+from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
@@ -32,11 +32,11 @@ Params_SR = slow_rate_params(transition_model, observation_model, l)
 Params_FR = fast_rate_params(transition_model, l)
 
 
-sequential_filtered = integrated_filtering(y, prior_x, Params_SR)
-# sequential_smoothed = integrated_smoothing(sequential_filtered, Params_SR)
+sequential_filtered = seq_filtering_slow_rate(y, prior_x, Params_SR)
+# sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)
 #
-parallel_filtered = parallel_filtering(y, prior_x, Params_SR)
-# parallel_smoothed = parallel_smoothing(parallel_filtered, Params_SR)
+parallel_filtered = par_filtering_slow_rate(y, prior_x, Params_SR)
+# parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
 
 def fast_rate(fast_params, slow_result_k_1, slow_result_k):
     m_0, P_0 = slow_result_k_1
