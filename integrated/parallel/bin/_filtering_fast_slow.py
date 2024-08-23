@@ -2,8 +2,7 @@ import jax
 import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
-from integrated._utils import none_or_concat
-from integrated.parallel._operator_fast_slow import filtering_operator
+from integrated.parallel.bin._operator_fast_slow import filtering_operator
 
 
 def filtering(observations: jnp.ndarray,

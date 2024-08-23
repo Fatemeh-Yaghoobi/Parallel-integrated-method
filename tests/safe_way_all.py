@@ -9,7 +9,7 @@ jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
-from integrated.inegrated_params import slow_rate_params, fast_rate_params_safe
+from integrated.inegrated_params import slow_rate_params, fast_rate_params
 from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_fast_rate
 from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
@@ -31,7 +31,7 @@ x, h, y = model.get_data()
 transition_model = model.TranParams()
 observation_model = model.ObsParams()
 Params_SR = slow_rate_params(transition_model, observation_model, l)
-Params_FR = fast_rate_params_safe(transition_model, observation_model, l)
+Params_FR = fast_rate_params(transition_model, observation_model, l)
 
 ### Filtering - Slow rate - Sequential and Parallel ###
 sequential_filtered = seq_filtering_slow_rate(y, prior_x, Params_SR)

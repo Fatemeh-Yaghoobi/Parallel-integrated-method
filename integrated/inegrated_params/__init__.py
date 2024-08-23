@@ -1,5 +1,4 @@
-from ._all_params import _fast_and_slow_params as all_params
 from ._slow_rate_params import _slow_rate_integrated_params as slow_rate_params
-from ._fast_rate_params import _fast_rate_params as fast_rate_params
-from ._params_new import _fast_and_slow_params as new_params
-from ._fast_params_safe import _fast_params as fast_rate_params_safe
+from ._fast_rate_params import _fast_params as fast_rate_params
+from integrated.inegrated_params.bin._all_params import _fast_and_slow_params as all_params
+from integrated.inegrated_params.bin._params_new import _fast_and_slow_params as new_params
