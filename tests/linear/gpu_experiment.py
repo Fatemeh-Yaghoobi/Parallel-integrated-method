@@ -9,8 +9,8 @@ from matplotlib import pyplot as plt
 jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
 from integrated.inegrated_params._slow_rate_params import _slow_rate_integrated_params
-from integrated.sequential import integrated_filtering, integrated_smoothing
-from integrated.parallel import parallel_filtering, parallel_smoothing
+from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate
+from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
@@ -58,19 +58,19 @@ lengths_space = np.logspace(2, int(np.log2(T)), num=10, base=2, dtype=int)
 
 ###############################################################################
 def sequential_filtering(y):
-    return integrated_filtering(y, prior_x, slow_rate_params)
+    return seq_filtering_slow_rate(y, prior_x, slow_rate_params)
 
 
 def sequential_smoothing(y):
-    return integrated_smoothing(sequential_filtering(y), slow_rate_params)
+    return seq_smoothing_slow_rate(sequential_filtering(y), slow_rate_params)
 
 
 def parallel_filtering_(y):
-    return parallel_filtering(y, prior_x, slow_rate_params)
+    return par_filtering_slow_rate(y, prior_x, slow_rate_params)
 
 
 def parallel_smoothing_(y):
-    return parallel_smoothing(parallel_filtering_(y), slow_rate_params)
+    return par_smoothing_slow_rate(parallel_filtering_(y), slow_rate_params)
 ###############################################################################
 gpu_sequential_filtering = jit(sequential_filtering, backend="gpu")
 gpu_sequential_smoothing = jit(sequential_smoothing, backend="gpu")
