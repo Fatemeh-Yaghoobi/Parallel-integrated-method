@@ -66,15 +66,17 @@ np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rto
 #%%
 
 #fast_sms, fast_sPs = batch_fast_smoother(model, y)
-#print(f"{fast_sPs = }")
+#print(f"{fast_sms = }")
 
 slow_sms, slow_sPs = batch_slow_smoother(model, y)
 print(f"{slow_sms = }")
 
 print(f"{sequential_smoothed.mean = }")
 
-#fast_fms, fast_fPs = batch_fast_filter(model, y)
-#print(f"{fast_fPs = }")
+fast_fms, fast_fPs = batch_fast_filter(model, y)
+print(f"{fast_fms = }")
+
+print(f"{fast_rate_result_filtered.mean = }")
 
 slow_fms, slow_fPs = batch_slow_filter(model, y)
 print(f"{slow_fms = }")

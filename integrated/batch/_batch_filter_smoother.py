@@ -120,8 +120,8 @@ def batch_fast_smoother(model, y):
 # Compute slow rate smoother result for the model given the measurements y
 def batch_slow_smoother(model, y):
     fast_sms, fast_sPs = batch_fast_smoother(model, y)
-    slow_sms = fast_sms[0::model.l]
-    slow_sPs = fast_sPs[0::model.l]
+    slow_sms = fast_sms[1::model.l]  # Take x_{k,1}
+    slow_sPs = fast_sPs[1::model.l]
     return slow_sms, slow_sPs
 
 # Compute fast rate filter result for the model given the measurements y
@@ -138,7 +138,12 @@ def batch_fast_filter(model, y):
     Y = y.reshape(-1)
 
     for xi in range(1, model.interval * model.l + 1):
-        yi = int(np.ceil((xi - 1) / model.l))  # XXX: Should double check
+        # xi = 0:5 should use y[0]
+        # xi = 0:10 should use y[0]
+        # xi = 0:11 should use y[0:1]
+        # xi = 0:19 should use y[0:1]
+        # xi = 0:20 should use y[0:1]
+        yi = (xi - 1) // model.l  # XXX: Should double check
 
         fMW = MW[0 : ((xi + 1) * model.nx)]
         fPW = PW[0 : ((xi + 1) * model.nx), 0 : ((xi + 1) * model.nx)]
