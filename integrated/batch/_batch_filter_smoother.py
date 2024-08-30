@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 from integrated._utils import none_or_concat
 
 jax.config.update('jax_platform_name', 'cpu')
-
 jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
@@ -148,7 +147,7 @@ def batch_fast_filter(model, y):
         fMW = MW[0 : ((xi + 1) * model.nx)]
         fPW = PW[0 : ((xi + 1) * model.nx), 0 : ((xi + 1) * model.nx)]
         fPsi = Psi[0 : ((xi + 1) * model.nx), 0 : ((xi + 1) * model.nx)]
-        fEta = Eta[0 : ((yi + 1) * model.ny), 0 : ((xi + 1) * model.nx)]
+        fEta = Eta[0 : ((yi + 1) * model.ny), (xi * model.nx) : ((xi + 2) * model.nx)]
         fY = Y[0 : ((yi + 1) * model.ny)]
         fSigma = Sigma[0 : ((yi + 1) * model.ny), 0 : ((yi + 1) * model.ny)]
 

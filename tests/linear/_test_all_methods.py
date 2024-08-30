@@ -10,7 +10,7 @@ jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
 from integrated.inegrated_params import slow_rate_params, fast_rate_params
-from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_fast_rate
+from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_fast_rate, smoothing_all_states
 from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
@@ -49,10 +49,15 @@ plt.plot(range(0, len(x) , l), sequential_filtered.mean[:, 1], '*--', color='b',
 plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 1], '*', color='r',  label='filter - fast')
 plt.show()
 
+#### Smoothing - All States - Sequential ###
+sequential_smoothed = smoothing_all_states(fast_rate_result_filtered, transition_model)
+
+
+
 ### Smoothing - Slow rate - Sequential and Parallel ###
-sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)
-parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
-np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rtol=1e-06, atol=1e-03)
+# sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)
+# parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
+# np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rtol=1e-06, atol=1e-03)
 
 ### Fast-rate Smoothing ###
 

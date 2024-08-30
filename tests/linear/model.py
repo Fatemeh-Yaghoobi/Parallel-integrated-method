@@ -1,9 +1,7 @@
 import jax
 import jax.numpy as jnp
 from chex import dataclass
-from jax._src.lax.control_flow import associative_scan
 from jax.lax import scan
-from matplotlib import pyplot as plt
 
 from integrated._base import MVNStandard, LinearObs, LinearTran
 
