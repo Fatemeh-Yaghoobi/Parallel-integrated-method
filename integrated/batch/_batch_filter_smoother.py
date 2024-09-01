@@ -137,24 +137,22 @@ def batch_fast_filter(model, y):
     fast_fPs[0] = model.prior_x.cov
     Y = y.reshape(-1)
 
-    for xi in range(1, model.interval * model.l + 1):
-        # xi = 0:5 should use y[0]
-        # xi = 0:10 should use y[0]
-        # xi = 0:11 should use y[0:1]
-        # xi = 0:19 should use y[0:1]
-        # xi = 0:20 should use y[0:1]
-        yi = (xi - 1) // model.l  # XXX: Should double check
+    for yi in range(model.interval):
+        xi1 = 1 + yi * model.l    # Start index of the interval
+        xi2 = (yi + 1) * model.l  # End index of the interval
 
-        fMW = MW[0 : ((xi + 1) * model.nx)]
-        fPW = PW[0 : ((xi + 1) * model.nx), 0 : ((xi + 1) * model.nx)]
-        fPsi = Psi[0 : ((xi + 1) * model.nx), 0 : ((xi + 1) * model.nx)]
-        fEta = Eta[0 : ((yi + 1) * model.ny), 0 : ((xi + 1) * model.nx)]
+        fMW = MW[0 : ((xi2 + 1) * model.nx)]
+        fPW = PW[0 : ((xi2 + 1) * model.nx), 0 : ((xi2 + 1) * model.nx)]
+        fPsi = Psi[0 : ((xi2 + 1) * model.nx), 0 : ((xi2 + 1) * model.nx)]
+        fEta = Eta[0 : ((yi + 1) * model.ny), 0 : ((xi2 + 1) * model.nx)]
         fY = Y[0 : ((yi + 1) * model.ny)]
         fSigma = Sigma[0 : ((yi + 1) * model.ny), 0 : ((yi + 1) * model.ny)]
 
         fMX, fPX = batch_full_smoother(fMW, fPW, fPsi, fEta, fSigma, fY)
-        fast_fms[xi] = fMX[(xi * model.nx):]
-        fast_fPs[xi] = fPX[(xi * model.nx):, (xi * model.nx):]
+
+        for xi in range(xi1, xi2+1):
+            fast_fms[xi] = fMX[(xi * model.nx) : ((xi + 1) * model.nx)]
+            fast_fPs[xi] = fPX[(xi * model.nx) : ((xi + 1) * model.nx), (xi * model.nx) : ((xi + 1) * model.nx)]
 
     return fast_fms, fast_fPs
 
