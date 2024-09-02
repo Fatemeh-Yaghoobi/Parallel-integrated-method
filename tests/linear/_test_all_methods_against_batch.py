@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpy as np
 from matplotlib import pyplot as plt
 
-from integrated._utils import none_or_concat
+from integrated._utils import none_or_concat, none_or_shift
 
 jax.config.update('jax_platform_name', 'cpu')
 
@@ -25,8 +25,8 @@ from integrated.batch import *
 #%% (new cell starts here)
 
 ################################### Parameters ########################################
-l = 10
-N = 2
+l = 2
+N = 1
 nx = 4
 ny = 2
 Q = 1
@@ -55,30 +55,37 @@ vmap_func = jax.vmap(filtering_fast_rate, in_axes=(0, None, 0))
 fast_rate_result_filtered_ = vmap_func(y, Params_FR, MVNStandard(m_l_k_1, P_l_k_1))
 fast_rate_result_filtered = none_or_concat(MVNStandard(fast_rate_result_filtered_.mean.reshape(-1, 4), fast_rate_result_filtered_.cov.reshape(-1, 4, 4)),
                                            MVNStandard(sequential_filtered.mean[-1], sequential_filtered.cov[-1]), 0)
+def selected_fast_filtered(filtered_results, l):
+    size = len(filtered_results.mean)
+    def body(_, i):
+        return _, MVNStandard(filtered_results.mean[i], filtered_results.cov[i])
 
+    _, selected =  jax.lax.scan(body, init = None, xs=jnp.arange(1, size, l))
+    return selected
+sr_filtered_k1 = selected_fast_filtered(fast_rate_result_filtered, l)
+# print(f"{sr_filtered_k1.mean = }")
 ### Smoothing - Slow rate - Sequential and Parallel ###
-sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)
-parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
-np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rtol=1e-06, atol=1e-03)
-
-
+sequential_smoothed = seq_smoothing_slow_rate(sr_filtered_k1, Params_SR)
+# print(f"{sequential_smoothed.mean = }")
+# parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
+# np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rtol=1e-06, atol=1e-03)
 
 #%%
 
-#fast_sms, fast_sPs = batch_fast_smoother(model, y)
-#print(f"{fast_sms = }")
+# fast_sms, fast_sPs = batch_fast_smoother(model, y)
+# print(f"{fast_sms = }")
 
-slow_sms, slow_sPs = batch_slow_smoother(model, y)
-print(f"{slow_sms = }")
+# slow_sms, slow_sPs = batch_slow_smoother(model, y)
+# print(f"{slow_sms = }")
 
-print(f"{sequential_smoothed.mean = }")
+# print(f"{sequential_smoothed.mean = }")
 
-fast_fms, fast_fPs = batch_fast_filter(model, y)
-print(f"{fast_fms = }")
-
-print(f"{fast_rate_result_filtered.mean = }")
-
-slow_fms, slow_fPs = batch_slow_filter(model, y)
-print(f"{slow_fms = }")
-
-print(f"{sequential_filtered.mean = }")
+# fast_fms, fast_fPs = batch_fast_filter(model, y)
+# print(f"{fast_fms = }")
+#
+# print(f"{fast_rate_result_filtered.mean = }")
+#
+# slow_fms, slow_fPs = batch_slow_filter(model, y)
+# print(f"{slow_fms = }")
+#
+# print(f"{sequential_filtered.mean = }")

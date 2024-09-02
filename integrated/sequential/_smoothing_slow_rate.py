@@ -1,13 +1,15 @@
 import jax
 import jax.scipy.linalg as jlag
+from jax.experimental.host_callback import id_print
 
-from integrated._base import MVNStandard
 from integrated._utils import none_or_shift, none_or_concat
 
+from integrated._base import MVNStandard
 
-def smoothing(filter_trajectory: MVNStandard,
+def smoothing(sr_filtered_trajectory: MVNStandard,
               slow_rate_params):
-    last_state = jax.tree_map(lambda z: z[-1], filter_trajectory)
+
+    last_state = jax.tree_map(lambda z: z[-1], sr_filtered_trajectory)
 
     def smooth_one(_slow_rate_params, xf, xs):
         return _standard_smooth(_slow_rate_params, xf, xs)
@@ -20,7 +22,7 @@ def smoothing(filter_trajectory: MVNStandard,
 
     _, smoothed_states = jax.lax.scan(body,
                                       last_state,
-                                      none_or_shift(filter_trajectory, -1),
+                                      none_or_shift(sr_filtered_trajectory, -1),
                                       reverse=True)
 
     smoothed_states = none_or_concat(smoothed_states, last_state, -1)
