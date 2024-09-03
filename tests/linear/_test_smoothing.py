@@ -1,4 +1,4 @@
- # This is a simple case in special case when l=2 and N=2
+ # This is a simple test in special case when l=2 and N=2
 
 import jax
 import jax.numpy as jnp
