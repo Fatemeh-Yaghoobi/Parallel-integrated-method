@@ -1,8 +1,8 @@
  # This is a simple test in special case when l=2 and N=2
-
 import jax
 import jax.numpy as jnp
 import numpy as np
+
 
 jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
@@ -68,7 +68,25 @@ mf1 = fast_fms[1]
 Pf1 = fast_fPs[1]
 ms1 = x_smoothed(mf1, Pf1, ms2, Ps2).mean
 Ps1 = x_smoothed(mf1, Pf1, ms2, Ps2).cov
-np.testing.assert_allclose(ms1, fast_sms[1], rtol=1e-06, atol=1e-03)
-np.testing.assert_allclose(Ps1, fast_sPs[1], rtol=1e-06, atol=1e-03)
+# np.testing.assert_allclose(ms1, fast_sms[1], rtol=1e-06, atol=1e-03)
+# np.testing.assert_allclose(Ps1, fast_sPs[1], rtol=1e-06, atol=1e-03)
 
 
+
+#### smoothed values for x_1 from x_3: we have x3 = A^2 x1 + A B u_1 + B u_2 + A w_1 + w_2
+def x_smoothed_sr(mf, Pf, ms, Ps):
+    A, B, u, Q1 = transition_model
+    Abar = A @ A
+    Qbar = A @ Q1 @ A.T + Q1
+
+    m_ = Abar @ mf + (A @ B @ u).reshape(-1) + (B @ u).reshape(-1)
+    P_ = Abar @ Pf @ Abar.T + Qbar
+    G = Pf @ Abar.T @ jnp.linalg.inv(P_)
+    ms = mf + G @ (ms - m_)
+    Ps = Pf + G @ (Ps - P_) @ G.T
+    return MVNStandard(ms, Ps)
+
+ms1_from_x3 = x_smoothed_sr(mf1, Pf1, ms3, Ps3).mean
+Ps1_from_x3 = x_smoothed_sr(mf1, Pf1, ms3, Ps3).cov
+np.testing.assert_allclose(ms1_from_x3, fast_sms[1], rtol=1e-06, atol=1e-03)
+np.testing.assert_allclose(Ps1_from_x3, fast_sPs[1], rtol=1e-06, atol=1e-03)
