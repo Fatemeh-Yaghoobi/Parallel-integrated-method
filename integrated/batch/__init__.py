@@ -1,5 +1,6 @@
 from ._batch_filter_smoother import batch_fast_smoother as batch_fast_smoother
 from ._batch_filter_smoother import batch_slow_smoother as batch_slow_smoother
 from ._batch_filter_smoother import batch_fast_filter as batch_fast_filter
+from ._batch_filter_smoother import batch_joint_fast_filter as batch_joint_fast_filter
 from ._batch_filter_smoother import batch_slow_filter as batch_slow_filter
 

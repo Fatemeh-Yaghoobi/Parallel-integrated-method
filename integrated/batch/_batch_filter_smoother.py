@@ -21,7 +21,7 @@ from tests.linear.model import DistillationSSM
 #               x_0 ~ N(m_0,P_0)
 #   x_{k+1} - A x_k ~ N(B u, Q)
 #   =>
-#   Psi X = W,  where W ~ N([m0;0;...;0], blkdiag(P0,Q,...,Q))
+#   Psi X = W,  where W ~ N([m0;B u;...;B u], blkdiag(P0,Q,...,Q))
 #
 # with X = [x_0;x_1;...;x_T], which defines the prior
 #
@@ -155,6 +155,38 @@ def batch_fast_filter(model, y):
             fast_fPs[xi] = fPX[(xi * model.nx) : ((xi + 1) * model.nx), (xi * model.nx) : ((xi + 1) * model.nx)]
 
     return fast_fms, fast_fPs
+
+
+# Compute joint fast rate filter result for the model given the measurements y
+# This is a very inefficient implementation but hopefully works. The initial
+# distribution is left out as it has a different size.
+def batch_joint_fast_filter(model, y):
+    MW, PW, Psi, Eta, Sigma = create_batch_model(model)
+
+    fast_fms = np.zeros((model.interval, model.nx * model.l),
+                        dtype=np.float64)
+    fast_fPs = np.zeros((model.interval, model.nx * model.l, model.nx * model.l),
+                        dtype=np.float64)
+    Y = y.reshape(-1)
+
+    for yi in range(model.interval):
+        xi1 = 1 + yi * model.l    # Start index of the interval
+        xi2 = (yi + 1) * model.l  # End index of the interval
+
+        fMW = MW[0 : ((xi2 + 1) * model.nx)]
+        fPW = PW[0 : ((xi2 + 1) * model.nx), 0 : ((xi2 + 1) * model.nx)]
+        fPsi = Psi[0 : ((xi2 + 1) * model.nx), 0 : ((xi2 + 1) * model.nx)]
+        fEta = Eta[0 : ((yi + 1) * model.ny), 0 : ((xi2 + 1) * model.nx)]
+        fY = Y[0 : ((yi + 1) * model.ny)]
+        fSigma = Sigma[0 : ((yi + 1) * model.ny), 0 : ((yi + 1) * model.ny)]
+
+        fMX, fPX = batch_full_smoother(fMW, fPW, fPsi, fEta, fSigma, fY)
+
+        fast_fms[yi] = fMX[xi1 * model.nx : (xi2 + 1) * model.nx]
+        fast_fPs[yi] = fPX[xi1 * model.nx : (xi2 + 1) * model.nx, xi1 * model.nx : (xi2+1) * model.nx]
+
+    return fast_fms, fast_fPs
+
 
 # Compute fast rate filter result for the model given the measurements y
 # This is a very inefficient implementation but hopefully works
