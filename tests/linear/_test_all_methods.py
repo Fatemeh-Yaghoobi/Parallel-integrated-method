@@ -9,14 +9,14 @@ jax.config.update('jax_platform_name', 'cpu')
 jax.config.update("jax_enable_x64", True)
 
 from integrated._base import MVNStandard
-from integrated.inegrated_params import slow_rate_params, fast_rate_params
-from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_fast_rate
+from integrated.inegrated_params import slow_rate_params, fast_rate_params, _full_transition_params
+from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_fast_rate, seq_smoothing_full
 from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-l = 10
-N = 2
+l = 2
+N = 3
 nx = 4
 ny = 2
 Q = 1
@@ -45,9 +45,14 @@ vmap_func = jax.vmap(filtering_fast_rate, in_axes=(0, None, 0))
 fast_rate_result_filtered_ = vmap_func(y, Params_FR, MVNStandard(m_l_k_1, P_l_k_1))
 fast_rate_result_filtered = none_or_concat(MVNStandard(fast_rate_result_filtered_.mean.reshape(-1, 4), fast_rate_result_filtered_.cov.reshape(-1, 4, 4)),
                                            MVNStandard(sequential_filtered.mean[-1], sequential_filtered.cov[-1]), 0)
-plt.plot(range(0, len(x) , l), sequential_filtered.mean[:, 1], '*--', color='b', label='sequential filter - slow')
-plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 1], '*', color='r',  label='filter - fast')
-plt.show()
+# plt.plot(range(0, len(x) , l), sequential_filtered.mean[:, 1], '*--', color='b', label='sequential filter - slow')
+# plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 1], '*--', color='r',  label='filter - fast')
+# plt.legend()
+# plt.show()
+
+fast_rate_last_interval = fast_rate_result_filtered.mean[(N-1)*l + 1 : N*l + 1, :] # x_{{N,1} : {N,l}}
+print(fast_rate_result_filtered.mean)
+print(fast_rate_last_interval)
 
 ### Smoothing - Slow rate - Sequential and Parallel ###
 sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)

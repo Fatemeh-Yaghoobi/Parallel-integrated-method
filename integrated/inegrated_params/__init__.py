@@ -1,4 +1,5 @@
 from ._slow_rate_params import _slow_rate_integrated_params as slow_rate_params
 from ._fast_rate_params import _fast_params as fast_rate_params
+from ._full_transition_params import _full_transition_params as full_transition_params
 from integrated.inegrated_params.bin._all_params import _fast_and_slow_params as all_params
 from integrated.inegrated_params.bin._params_new import _fast_and_slow_params as new_params
