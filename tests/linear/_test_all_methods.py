@@ -36,12 +36,18 @@ Params_SR = slow_rate_params(transition_model, observation_model, l)
 Params_FR = fast_rate_params(transition_model, observation_model, l)
 Params_full = full_transition_params(transition_model, l)
 
+Ahat, Bhat_u, Qhat = Params_full
+A, B, u, Q1 = transition_model
+# np.set_printoptions(precision=3)
+# print(f"{Bhat_u = }")
+# print(f"{A @ B + B = }")
+
 ### Filtering - Slow rate - Sequential and Parallel ###
 sequential_filtered = seq_filtering_slow_rate(y, prior_x, Params_SR)
 parallel_filtered = par_filtering_slow_rate(y, prior_x, Params_SR)
 np.testing.assert_allclose(sequential_filtered.mean, parallel_filtered.mean, rtol=1e-06, atol=1e-03)
 
-### Fast-rate Filtering ###
+## Fast-rate Filtering ###
 m_l_k_1 = sequential_filtered.mean[:-1]
 P_l_k_1 = sequential_filtered.cov[:-1]
 m_l_k = sequential_filtered.mean[1:]
@@ -60,24 +66,22 @@ reshaped_new_cov = jnp.zeros((N, l*nx, l*nx))
 for i in range(N):
     reshaped_new_cov = reshaped_new_cov.at[i, :, :].set(new_cov[i*l*nx: (i + 1)*l*nx, i*l*nx: (i + 1)*l*nx])
 batch_filtered_results = MVNStandard(new_mean, reshaped_new_cov)
-
 ### smoothing - full ###
 sequential_smoothed_full = seq_smoothing_full(batch_filtered_results, Params_full)
-np.set_printoptions(precision=1)
+
+# np.set_printoptions(precision=3)
 fast_fms, fast_fPs = batch_fast_filter(model, y)
+fast_sms, fast_sPs = batch_fast_smoother(model, y)
+print(f"{fast_sms = }")
+print(f"{sequential_smoothed_full.mean = }")
 
 
 
-### Smoothing - Slow rate - Sequential and Parallel ###
-# sequential_smoothed = seq_smoothing_slow_rate(sequential_filtered, Params_SR)
-# parallel_smoothed = par_smoothing_slow_rate(parallel_filtered, Params_SR)
-# np.testing.assert_allclose(sequential_smoothed.mean, parallel_smoothed.mean, rtol=1e-06, atol=1e-03)
-
-### Fast-rate Smoothing ###
-
-
-
-# plt.plot(range(0, len(x) , l), sequential_filtered.mean[:, 1], '*--', color='b', label='sequential filter - slow')
-# plt.plot(fast_rate_result_filtered.mean.reshape(-1, 4)[:, 1], '*--', color='r',  label='filter - fast')
-# plt.legend()
-# plt.show()
+# P_k_1_l = reshaped_new_cov[0, :, :]  # 8 x 8
+# M_k_1_l = new_mean[0, :]  # 8
+# print(f"{M_k_1_l.shape = }")
+# print(f"{fast_fms[3:5, :].reshape(-1,) = }")
+# G_star = P_k_1_l @ Ahat.T @ jnp.linalg.inv(Ahat @ P_k_1_l @ Ahat.T + Qhat)
+# M_bar = M_k_1_l + G_star @ (fast_fms[3:5, :].reshape(-1,) - Ahat @ M_k_1_l - Bhat_u)
+# print(f"{M_bar = }")
+# print(sequential_smoothed_full.mean)

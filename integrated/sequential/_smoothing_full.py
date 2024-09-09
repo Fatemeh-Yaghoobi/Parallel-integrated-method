@@ -1,5 +1,6 @@
 import jax
 import jax.scipy.linalg as jlag
+from jax.experimental.host_callback import id_print
 
 from integrated._base import MVNStandard
 from integrated._utils import none_or_shift, none_or_concat
@@ -40,6 +41,7 @@ def _standard_smooth(full_transition_params, xf, xs):
 
     gain = Pf @ jlag.solve(S, Ahat, assume_a='pos').T
     ms = mf + gain @ mean_diff
+    id_print(ms)
     Ps = Pf + gain @ cov_diff @ gain.T
 
     return MVNStandard(ms, Ps)
