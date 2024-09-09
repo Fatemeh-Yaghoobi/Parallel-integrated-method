@@ -8,13 +8,15 @@ from integrated._utils import none_or_concat
 
 def filtering(y: jnp.ndarray,
               fast_params,
-              xl_k_1):
+              xl_k_1,
+              xl_k):
 
     x_predict_interval = _integrated_predict(fast_params, xl_k_1)
     x_update_interval = _integrated_update(fast_params, x_predict_interval, xl_k_1, y)
     xs = none_or_concat(x_update_interval, xl_k_1, 1)
+    xs_for_smoothing = none_or_concat(x_update_interval, xl_k, -1)
 
-    return xs
+    return xs, xs_for_smoothing
 
 
 def _integrated_predict(fast_params, x):

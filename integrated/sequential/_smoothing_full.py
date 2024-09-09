@@ -5,9 +5,10 @@ from integrated._base import MVNStandard
 from integrated._utils import none_or_shift, none_or_concat
 
 
-def smoothing(filtered_last_interval: MVNStandard,
-              full_transition_params,
-              filter_trajectory_sr):
+def smoothing(batch_filtered_results: MVNStandard,
+              full_transition_params):
+
+    filtered_last_interval = jax.tree_map(lambda z: z[-1], batch_filtered_results)
 
     def smooth_one(_full_params, xf, xs):
         return _standard_smooth(_full_params, xf, xs)
@@ -20,23 +21,24 @@ def smoothing(filtered_last_interval: MVNStandard,
 
     _, smoothed_states = jax.lax.scan(body,
                                       filtered_last_interval,
-                                      none_or_shift(filter_trajectory_sr, -1),
+                                      none_or_shift(batch_filtered_results, -1),
                                       reverse=True)
-    last_state = jax.tree_map(lambda z: z[-1], filter_trajectory_sr)
-    smoothed_states = none_or_concat(smoothed_states, last_state, -1)
+    smoothed_states = none_or_concat(smoothed_states, filtered_last_interval, -1)
     return smoothed_states
 
 
-def _standard_smooth(slow_rate_params, xf, xs):
+
+def _standard_smooth(full_transition_params, xf, xs):
+    a = xf
     mf, Pf = xf
     ms, Ps = xs
-    A_bar, _, _, _, Bu_bar, Q_bar, _, _, _, _, _, _ = slow_rate_params
+    Ahat, Bhat_u, Qhat = full_transition_params
 
-    mean_diff = ms - (Bu_bar + A_bar @ mf)
-    S = A_bar @ Pf @ A_bar.T + Q_bar
+    mean_diff = ms - (Bhat_u + Ahat @ mf)
+    S = Ahat @ Pf @ Ahat.T + Qhat
     cov_diff = Ps - S
 
-    gain = Pf @ jlag.solve(S, A_bar, assume_a='pos').T
+    gain = Pf @ jlag.solve(S, Ahat, assume_a='pos').T
     ms = mf + gain @ mean_diff
     Ps = Pf + gain @ cov_diff @ gain.T
 

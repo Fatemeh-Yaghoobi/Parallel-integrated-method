@@ -20,8 +20,12 @@ def _full_transition_params(transition_model, l: int):
     Ahat = jnp.zeros((l * nx, l * nx))
     Bhat = jnp.zeros((l * nx, (2 * l - 1) * nu))
     Ghat = jnp.zeros((l * nx, (2 * l - 1) * nx))
+    Qtilda = jax.scipy.linalg.block_diag(*( [Q] * (2*l - 1) ))
+    uhat = jnp.array(jnp.stack([u] * (2 * l - 1))).reshape(-1, nu)
     for i in range(l):
         Ahat = Ahat.at[i * nx: (i + 1) * nx, i * nx: (i + 1) * nx].set(A)
         Bhat = Bhat.at[i * nx: (i + 1) * nx, i * nu: (l + i) * nu].set(Bbar_matrix)
         Ghat = Ghat.at[i * nx: (i + 1) * nx, i * nx: (l + i) * nx].set(Gbar_matrix)
-    return Ahat, Bhat, Ghat
+    Bhat_u = (Bhat @ uhat).reshape(-1,)
+    Qhat = Ghat @ Qtilda @ Ghat.T
+    return Ahat, Bhat_u, Qhat
