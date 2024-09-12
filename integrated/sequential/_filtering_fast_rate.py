@@ -5,6 +5,9 @@ jax.config.update("jax_enable_x64", True)
 from integrated._base import MVNStandard
 from integrated._utils import none_or_concat
 
+# This code provides the filtering means and covariances for the fast rate states,
+# but it does provide the filtering cross covariances between the states.
+
 
 def filtering(y: jnp.ndarray,
               fast_params,
