@@ -16,8 +16,8 @@ from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-l = 3
-N = 3
+l = 2
+N = 2
 nx = 4
 ny = 2
 Q = 1
@@ -52,8 +52,6 @@ vmap_func_all_states = jax.vmap(filtering_all_states, in_axes=(0, None, 0))
 all_states_filtered_ = vmap_func_all_states(y, Params_all_states, MVNStandard(m_l_k_1, P_l_k_1))
 all_filtering_means, all_filtering_covs = all_states_filtered_.mean, all_states_filtered_.cov
 
-print(f"{all_filtering_means.shape = }")
-print(f"{all_filtering_covs.shape = }")
 
 np.testing.assert_allclose(fast_rate_result_filtered.mean[1:], all_filtering_means.reshape(-1, 4), rtol=1e-06, atol=1e-03)
 from integrated.batch import *
@@ -106,4 +104,21 @@ sequential_smoothed_fast_rate = vmap_function(MVNStandard(all_filtering_means[:-
                                               transition_model,
                                               Pf_k_all_l[:-1, :, :])
 
+sequential_smoothed_fast_rate = none_or_concat(sequential_smoothed_fast_rate,
+                                               MVNStandard(all_filtering_means[-1, :], all_filtering_covs[-1, :, :]),
+                                               0)
+seq_smoothed_fr_means = sequential_smoothed_fast_rate.mean.reshape(-1, nx)  # shape (N * l, nx)
+seq_smoothed_fr_covs = jnp.zeros((N * l, nx, nx))
+for i in range(N):
+    for j in range(l):
+        seq_smoothed_fr_covs = seq_smoothed_fr_covs.at[i * l + j].set(sequential_smoothed_fast_rate.cov[i, j*nx:(j+1)*nx, j*nx:(j+1)*nx])
 
+np.testing.assert_allclose(seq_smoothed_fr_means, fast_sms[1:], rtol=1e-06, atol=1e-03)
+np.testing.assert_allclose(seq_smoothed_fr_covs, fast_sPs[1:], rtol=1e-06, atol=1e-03)
+######################################################### par_smoothing_all_rate########################################################################
+par_smoothing = par_smoothing_slow_rate(transition_model,
+                                        MVNStandard(all_filtering_means, all_filtering_covs),
+                                        MVNStandard(sr_filtered_kl.mean[:-1, :], sr_filtered_kl.cov[:-1, :, :]),
+                                        Pf_k_all_l[:-1, :, :])
+
+print(par_smoothing.mean.shape)
