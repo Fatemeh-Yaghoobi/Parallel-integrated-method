@@ -16,7 +16,7 @@ from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-l = 2
+l = 3
 N = 2
 nx = 4
 ny = 2
@@ -115,10 +115,13 @@ for i in range(N):
 
 np.testing.assert_allclose(seq_smoothed_fr_means, fast_sms[1:], rtol=1e-06, atol=1e-03)
 np.testing.assert_allclose(seq_smoothed_fr_covs, fast_sPs[1:], rtol=1e-06, atol=1e-03)
-######################################################### par_smoothing_all_rate########################################################################
+######################################################### par_smoothing_slow_rate########################################################################
 par_smoothing = par_smoothing_slow_rate(transition_model,
-                                        MVNStandard(all_filtering_means, all_filtering_covs),
+                                        MVNStandard(all_filtering_means[:, 0:4], all_filtering_covs[:, 0:4, 0:4]),
                                         MVNStandard(sr_filtered_kl.mean[:-1, :], sr_filtered_kl.cov[:-1, :, :]),
-                                        Pf_k_all_l[:-1, :, :])
+                                        Pf_k_all_l[:-1, 0:4, :])
 
-print(par_smoothing.mean.shape)
+print(par_smoothing.mean)
+print(sequential_smoothed_slow_rate.mean)
+#######################################################################################################################################
+
