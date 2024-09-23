@@ -1,8 +1,6 @@
 import jax
 import jax.numpy as jnp
 import numpy as np
-from jax.experimental.host_callback import id_print
-from matplotlib import pyplot as plt
 
 from integrated._utils import none_or_concat
 
@@ -62,8 +60,8 @@ np.testing.assert_allclose(Pf_all, all_filtering_covs, rtol=1e-06, atol=1e-03)
 ############################################### Smoothing - Slow rate - Sequential ########################################################
 # Selection the filtering cross-covariances between the first and last states in each interval, i.e., P^f_{k, 1, l}.
 def selected_Pf_k1l(Pf_all_, l):
-    nx = int(Pf_all.shape[-1] / l)
-    N = Pf_all.shape[0]
+    # nx = int(Pf_all_.shape[-1] / l)
+    # N = Pf_all_.shape[0]
     def body(_, i):
         return _, Pf_all_[i, 0:nx, (l-1)*nx:l*nx]
 
