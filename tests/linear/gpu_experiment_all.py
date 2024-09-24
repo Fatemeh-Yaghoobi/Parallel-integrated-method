@@ -9,16 +9,19 @@ from matplotlib import pyplot as plt
 from integrated._utils import none_or_concat
 
 jax.config.update("jax_enable_x64", True)
+
 from integrated._base import MVNStandard
 from integrated.inegrated_params import slow_rate_params, fast_rate_params, full_filtering_params
-from integrated.sequential import seq_filtering_slow_rate, seq_smoothing_slow_rate, filtering_all_states, smoothing_fast_rate
+from integrated.sequential import (seq_filtering_slow_rate, seq_smoothing_slow_rate,
+                                   filtering_all_states, smoothing_fast_rate, filtering_fast_rate)
 from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-l = 10
-N = 5000
-T = N
+n_length_space = 3
+l = 2**n_length_space
+N = 4000
+T = N * l
 nx = 4
 ny = 2
 Q = 1
@@ -39,7 +42,7 @@ def func(method, lengths, n_runs=100):
     res_mean = []
     res_median = []
     for k, j in enumerate(lengths):
-        print(f"Iteration {k + 1} out of {len(lengths)}", end='\n')
+        print(f"Iteration {k + 1} out of {len(lengths)}", end='\r')
         observations_slice = y[:j]
         s = method(observations_slice)
         s.mean.block_until_ready()
@@ -50,15 +53,15 @@ def func(method, lengths, n_runs=100):
             s_states.mean.block_until_ready()
             toc = time.time()
             run_times.append(toc - tic)
-            print(f"run {i + 1} out of {n_runs}", end='\n')
+            print(f"run {i + 1} out of {n_runs}", end='\r')
         res_mean.append(np.mean(run_times))
         res_median.append(np.median(run_times))
     print()
     return np.array(res_mean), np.array(res_median)
 
 
-lengths_space = np.logspace(2, int(np.log2(T)), num=10, base=2, dtype=int)
-
+lengths_space = np.logspace(n_length_space, int(np.log2(T)), num=10, base=2, dtype=int)
+print(lengths_space)
 
 ###############################################################################
 def sequential_filtering(y):
@@ -70,40 +73,43 @@ def sequential_filtering(y):
     vmap_func_all_states = jax.vmap(filtering_all_states, in_axes=(0, None, 0))
     all_states_filtered_ = vmap_func_all_states(y, Params_all_states, MVNStandard(m_l_k_1, P_l_k_1))
     all_filtering_means, all_filtering_covs = all_states_filtered_.mean, all_states_filtered_.cov
-    return all_filtering_means, all_filtering_covs
+    fast_rate_result_filtered = MVNStandard(all_filtering_means, all_filtering_covs)
+    return fast_rate_result_filtered
 
 
 def sequential_smoothing(y):
-    all_filtering_means, all_filtering_covs = sequential_filtering(y)
-    fast_rate_result_filtered = MVNStandard(all_filtering_means, all_filtering_covs)
+    fast_rate_result_filtered = sequential_filtering(y)
+    all_filtering_means, all_filtering_covs = fast_rate_result_filtered.mean, fast_rate_result_filtered.cov
     # params-preparation - same in sequential and parallel version
     def selected_Pf_k1l(Pf_all_, l):
+        size = Pf_all_.shape[0]
         def body(_, i):
             return _, Pf_all_[i, 0:nx, (l - 1) * nx:l * nx]
 
-        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(N))
+        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(size))
         return selected
     Pf_k1l = selected_Pf_k1l(all_filtering_covs, l)
 
+    # Selecting the first states of the filtering result in each interval, i.e., m^f_{1:N, 1} and P^f_{1:N, 1}.
     def selected_fast_filtered(filtered_results, l):
-        size = len(filtered_results.mean)
-
+        size = filtered_results.mean.shape[0]
         def body(_, i):
-            return _, (MVNStandard(filtered_results.mean[i], filtered_results.cov[i]),
-                       MVNStandard(filtered_results.mean[i + l - 1], filtered_results.cov[i + l - 1]))
+            return _, (MVNStandard(filtered_results.mean[i, 0:nx], filtered_results.cov[i, 0:nx, 0:nx]),
+                       MVNStandard(filtered_results.mean[i, (l - 1) * nx:l * nx],
+                                   filtered_results.cov[i, (l - 1) * nx:l * nx, (l - 1) * nx:l * nx]))
 
-        _, (selected_1, selected_l) = jax.lax.scan(body, init=None, xs=jnp.arange(1, size, l))
+        _, (selected_1, selected_l) = jax.lax.scan(body, init=None, xs=jnp.arange(0, size, 1))
         return selected_1, selected_l
-
     sr_filtered_k1, sr_filtered_kl = selected_fast_filtered(fast_rate_result_filtered, l)
     # slow-rate
     sequential_smoothed_slow_rate = seq_smoothing_slow_rate(sr_filtered_k1, sr_filtered_kl, transition_model, Pf_k1l)
     # params-preparation - same in sequential and parallel version
     def selected_Pf_k_all_l(Pf_all_, l):
+        size = Pf_all_.shape[0]
         def body(_, i):
             return _, Pf_all_[i, :, (l - 1) * nx:l * nx]
 
-        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(N))
+        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(size))
         return selected
 
     Pf_k_all_l = selected_Pf_k_all_l(all_filtering_covs, l)
@@ -132,30 +138,33 @@ def parallel_filtering_(y):
     vmap_func_all_states = jax.vmap(filtering_all_states, in_axes=(0, None, 0))
     all_states_filtered_ = vmap_func_all_states(y, Params_all_states, MVNStandard(m_l_k_1, P_l_k_1))
     all_filtering_means, all_filtering_covs = all_states_filtered_.mean, all_states_filtered_.cov
-    return all_filtering_means, all_filtering_covs
+    fast_rate_result_filtered = MVNStandard(all_filtering_means, all_filtering_covs)
+    return fast_rate_result_filtered
 
 
 def parallel_smoothing_(y):
-    all_filtering_means, all_filtering_covs = parallel_filtering_(y)
-    fast_rate_result_filtered = MVNStandard(all_filtering_means, all_filtering_covs)
+    fast_rate_result_filtered = parallel_filtering_(y)
+    all_filtering_means, all_filtering_covs = fast_rate_result_filtered.mean, fast_rate_result_filtered.cov
     # params preparation - same in sequential and parallel version
+    # Selecting the first states of the filtering result in each interval, i.e., m^f_{1:N, 1} and P^f_{1:N, 1}.
     def selected_fast_filtered(filtered_results, l):
-        size = len(filtered_results.mean)
-
+        size = filtered_results.mean.shape[0]
         def body(_, i):
-            return _, (MVNStandard(filtered_results.mean[i], filtered_results.cov[i]),
-                       MVNStandard(filtered_results.mean[i + l - 1], filtered_results.cov[i + l - 1]))
+            return _, (MVNStandard(filtered_results.mean[i, 0:nx], filtered_results.cov[i, 0:nx, 0:nx]),
+                       MVNStandard(filtered_results.mean[i, (l - 1) * nx:l * nx],
+                                   filtered_results.cov[i, (l - 1) * nx:l * nx, (l - 1) * nx:l * nx]))
 
-        _, (selected_1, selected_l) = jax.lax.scan(body, init=None, xs=jnp.arange(1, size, l))
+        _, (selected_1, selected_l) = jax.lax.scan(body, init=None, xs=jnp.arange(0, size, 1))
         return selected_1, selected_l
 
     sr_filtered_k1, sr_filtered_kl = selected_fast_filtered(fast_rate_result_filtered, l)
 
     def selected_Pf_k_all_l(Pf_all_, l):
+        size = Pf_all_.shape[0]
         def body(_, i):
             return _, Pf_all_[i, :, (l - 1) * nx:l * nx]
 
-        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(N))
+        _, selected = jax.lax.scan(body, init=None, xs=jnp.arange(size))
         return selected
 
     Pf_k_all_l = selected_Pf_k_all_l(all_filtering_covs, l)
@@ -183,19 +192,19 @@ gpu_parallel_filtering = jit(parallel_filtering_, backend="gpu")
 gpu_parallel_smoothing = jit(parallel_smoothing_, backend="gpu")
 ###############################################################################
 gpu_par_filter_mean_times, gpu_par_filter_median_times = func(gpu_parallel_filtering, lengths_space)
-jnp.savez("results/gpu_par_filter_times",
+jnp.savez("results/results_all_methods_final_version/gpu_par_filter_times",
           gpu_par_filter_mean_times=gpu_par_filter_mean_times,
           gpu_par_filter_median_times=gpu_par_filter_median_times)
 gpu_par_smooth_mean_times, gpu_par_smooth_median_times = func(gpu_parallel_smoothing, lengths_space)
-jnp.savez("results/gpu_par_smooth_times",
+jnp.savez("results/results_all_methods_final_version/gpu_par_smooth_times",
           gpu_par_smooth_mean_times=gpu_par_smooth_mean_times,
           gpu_par_smooth_median_times=gpu_par_smooth_median_times)
 gpu_seq_filter_mean_times, gpu_seq_filter_median_times = func(gpu_sequential_filtering, lengths_space)
-jnp.savez("results/gpu_seq_filter_times",
+jnp.savez("results/results_all_methods_final_version/gpu_seq_filter_times",
           gpu_seq_filter_mean_times=gpu_seq_filter_mean_times,
           gpu_seq_filter_median_times=gpu_seq_filter_median_times)
 gpu_seq_smooth_mean_times, gpu_seq_smooth_median_times = func(gpu_sequential_smoothing, lengths_space)
-jnp.savez("results/gpu_seq_smooth_times",
+jnp.savez("results/results_all_methods_final_version/gpu_seq_smooth_times",
           gpu_seq_smooth_mean_times=gpu_seq_smooth_mean_times,
           gpu_seq_smooth_median_times=gpu_seq_smooth_median_times)
 ###############################################################################

@@ -60,8 +60,6 @@ np.testing.assert_allclose(Pf_all, all_filtering_covs, rtol=1e-06, atol=1e-03)
 ############################################### Smoothing - Slow rate - Sequential ########################################################
 # Selection the filtering cross-covariances between the first and last states in each interval, i.e., P^f_{k, 1, l}.
 def selected_Pf_k1l(Pf_all_, l):
-    # nx = int(Pf_all_.shape[-1] / l)
-    # N = Pf_all_.shape[0]
     def body(_, i):
         return _, Pf_all_[i, 0:nx, (l-1)*nx:l*nx]
 
@@ -71,14 +69,14 @@ Pf_k1l = selected_Pf_k1l(all_filtering_covs, l)
 
 # Selecting the first states of the filtering result in each interval, i.e., m^f_{1:N, 1} and P^f_{1:N, 1}.
 def selected_fast_filtered(filtered_results, l):
-    size = len(filtered_results.mean)
     def body(_, i):
-        return _, (MVNStandard(filtered_results.mean[i], filtered_results.cov[i]),
-                   MVNStandard(filtered_results.mean[i + l - 1], filtered_results.cov[i + l - 1]))
+        return _, (MVNStandard(filtered_results.mean[i, 0:nx], filtered_results.cov[i, 0:nx, 0:nx]),
+                   MVNStandard(filtered_results.mean[i, (l-1)*nx:l*nx], filtered_results.cov[i, (l-1)*nx:l*nx, (l-1)*nx:l*nx]))
 
-    _, (selected_1, selected_l)  =  jax.lax.scan(body, init = None, xs=jnp.arange(1, size, l))
+    _, (selected_1, selected_l)  =  jax.lax.scan(body, init = None, xs=jnp.arange(0, N, 1))
     return selected_1, selected_l
-sr_filtered_k1, sr_filtered_kl = selected_fast_filtered(fast_rate_result_filtered, l)
+sr_filtered_k1, sr_filtered_kl = selected_fast_filtered(MVNStandard(all_filtering_means, all_filtering_covs), l)
+
 # Slow-rate Smoothing
 fast_sms, fast_sPs = batch_fast_smoother(model, y)
 sequential_smoothed_slow_rate = seq_smoothing_slow_rate(sr_filtered_k1, sr_filtered_kl, transition_model, Pf_k1l)
