@@ -18,7 +18,7 @@ from integrated.parallel import par_filtering_slow_rate, par_smoothing_slow_rate
 from tests.linear.model import DistillationSSM
 
 ################################### Parameters ########################################
-n_length_space = 3
+n_length_space = 4
 l = 2**n_length_space
 N = 4000
 T = N * l
@@ -42,7 +42,7 @@ def func(method, lengths, n_runs=100):
     res_mean = []
     res_median = []
     for k, j in enumerate(lengths):
-        print(f"Iteration {k + 1} out of {len(lengths)}", end='\r')
+        print(f"Iteration {k + 1} out of {len(lengths)}\r", end="")
         observations_slice = y[:j]
         s = method(observations_slice)
         s.mean.block_until_ready()
@@ -53,7 +53,7 @@ def func(method, lengths, n_runs=100):
             s_states.mean.block_until_ready()
             toc = time.time()
             run_times.append(toc - tic)
-            print(f"run {i + 1} out of {n_runs}", end='\r')
+            print(f"run {i + 1} out of {n_runs}\r", end="")
         res_mean.append(np.mean(run_times))
         res_median.append(np.median(run_times))
     print()
@@ -192,19 +192,19 @@ gpu_parallel_filtering = jit(parallel_filtering_, backend="gpu")
 gpu_parallel_smoothing = jit(parallel_smoothing_, backend="gpu")
 ###############################################################################
 gpu_par_filter_mean_times, gpu_par_filter_median_times = func(gpu_parallel_filtering, lengths_space)
-jnp.savez("results/results_all_methods_final_version/gpu_par_filter_times",
+jnp.savez("results/results_all_methods_final_version_L16_N4000/gpu_par_filter_times",
           gpu_par_filter_mean_times=gpu_par_filter_mean_times,
           gpu_par_filter_median_times=gpu_par_filter_median_times)
 gpu_par_smooth_mean_times, gpu_par_smooth_median_times = func(gpu_parallel_smoothing, lengths_space)
-jnp.savez("results/results_all_methods_final_version/gpu_par_smooth_times",
+jnp.savez("results/results_all_methods_final_version_L16_N4000/gpu_par_smooth_times",
           gpu_par_smooth_mean_times=gpu_par_smooth_mean_times,
           gpu_par_smooth_median_times=gpu_par_smooth_median_times)
 gpu_seq_filter_mean_times, gpu_seq_filter_median_times = func(gpu_sequential_filtering, lengths_space)
-jnp.savez("results/results_all_methods_final_version/gpu_seq_filter_times",
+jnp.savez("results/results_all_methods_final_version_L16_N4000/gpu_seq_filter_times",
           gpu_seq_filter_mean_times=gpu_seq_filter_mean_times,
           gpu_seq_filter_median_times=gpu_seq_filter_median_times)
 gpu_seq_smooth_mean_times, gpu_seq_smooth_median_times = func(gpu_sequential_smoothing, lengths_space)
-jnp.savez("results/results_all_methods_final_version/gpu_seq_smooth_times",
+jnp.savez("results/results_all_methods_final_version_L16_N4000/gpu_seq_smooth_times",
           gpu_seq_smooth_mean_times=gpu_seq_smooth_mean_times,
           gpu_seq_smooth_median_times=gpu_seq_smooth_median_times)
 ###############################################################################
