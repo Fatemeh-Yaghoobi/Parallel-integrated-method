@@ -12,4 +12,4 @@ This code is written by [Fatemeh Yaghoobi](https://github.com/Fatemeh-Yaghoobi) 
 
 ## Examples
 
-Examples (reproducing the experiments from our paper) can be found in the [tests folder](../main/tests). 
+Examples (reproducing the experiments from our paper) can be found in the [tests folder](https://github.com/Fatemeh-Yaghoobi/Parallel-integrated-method/tree/master/tests/linear). 
