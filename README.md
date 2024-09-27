@@ -1,4 +1,4 @@
-## Parallel state estimation for system with integrated measurements
+## Parallel state estimation for systems with integrated measurements
 
 This repository contains the code for the paper "Parallel state estimation for system with integrated measurements".
 The code leverages JAX and implements the parallel state estimation algorithm for a system with integrated measurements.
