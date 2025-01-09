@@ -4,7 +4,7 @@ This repository contains the code for the paper "Parallel state estimation for s
 The code leverages JAX and implements the parallel state estimation algorithm for a system with integrated measurements.
 
 This code is written by [Fatemeh Yaghoobi](https://github.com/Fatemeh-Yaghoobi) and [Simo Särkkä](https://github.com/ssarkka). 
-ArXiv link: https://arxiv.org/abs/2410.00627
+Link: https://ieeexplore.ieee.org/abstract/document/10804629
 
 ## Installation
 
