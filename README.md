@@ -14,3 +14,17 @@ ArXiv link: https://arxiv.org/abs/2410.00627
 ## Examples
 
 Examples (reproducing the experiments from our paper) can be found in the [tests folder](https://github.com/Fatemeh-Yaghoobi/Parallel-integrated-method/tree/master/tests/linear). 
+
+## How to cite
+
+If you find this work useful, please cite us in the following way:
+
+```
+@article{yaghoobi2024parallel,
+  title={Parallel state estimation for systems with integrated measurements},
+  author={Fatemeh Yaghoobi and Simo S\"arkk\"a},
+  journal={IEEE Signal Processing Letters},
+  year={2024},
+  publisher={IEEE}
+}
+```
